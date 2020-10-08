@@ -2,10 +2,9 @@
 title: "Cleaning and Tidying Data"
 author: "Joel Ramirez Jr"
 date: "5/20/2020"
-output: html_document
+output:
+  html_document: default
 ---
-
-
 
 ```{r, echo=FALSE}
 library(knitr)
@@ -15,41 +14,43 @@ opts_chunk$set(echo=TRUE,
 ```
 
 ## Load libraries
-```{r}
+```{r, echo=FALSE}
 library(tidyverse)
 library(readxl)
 ```
 
 
 
-```{r}
+```{r, echo=FALSE}
 csvAWCseg.unordered<- function(df, na.rm = TRUE, ...){
   
-  # create list of counties in data to loop over 
+  # creates the list of subjects to loop over 
   subject_list <- unique(df$SUBJECT)
-  # create for loop to produce ggplot2 graphs 
+  
+  # for each participant
   for (i in seq_along(subject_list)) { 
     
-    # create plot for each subject in df 
+    # create individual data frame for each subject in the original dataframe 
     cur_df <- df %>% 
       filter(SUBJECT == subject_list[i]) %>% 
       distinct(SUBJECT, Time, RecTime, Duration, AWC, CTC, CVC)
-      
+    
     write_csv(cur_df, paste('SubLenaVals/',subject_list[i], 'SegVals.csv', sep=''))
   }
 }
 
 
 csvAWVseg.unorderedPercentile<- function(df, percentile, na.rm = TRUE, ...){
-  # create list of counties in data to loop over 
+  # create list of subjects in data to loop over 
   subject_list <- unique(df$SUBJECT)
-  # create for loop to produce ggplot2 graphs 
+  
   for (i in seq_along(subject_list)) { 
     
     # create plot for each subject in df 
     cur_df <- df %>% 
       filter(SUBJECT == subject_list[i])
      
+    #makes sure to filter for 
     awcPerc<- quantile(df$AWC, probs = c(percentile))
     ctcPerc<- quantile(df$CTC, probs = c(percentile))
     cvcPerc<- quantile(df$CVC, probs = c(percentile))
@@ -73,15 +74,13 @@ sotCodingSheet16 <- read_csv("TL3Data/SOT_NEW16FIXED.csv")
 sotCodingSheet18 <- read_csv("TL3Data/SOT_NEW18FIXED.csv") 
 clusterValue <- read_csv("clusterMeasures.csv")
 # grabbing the neccesary files
-# sotCodingSheet16 <- sotCodingSheet16[c(1:23, 47)]
-# sotCodingSheet18 <- sotCodingSheet18[c(1:23, 47)]
 sotCodingSheet16 <- sotCodingSheet16[c(1:23)]
 sotCodingSheet18 <- sotCodingSheet18[c(1:23)]
 ```
 
 # LENA info
 # Read in LENA data from TL3 to rename variable names and create a new CSV with the new variable names.
-```{r}
+```{r, echo=FALSE}
 TL3MetadataRenamed = TL3Metadata %>% 
   rename(
     SUBJECT = "SubjectID1 Subject #",
@@ -111,7 +110,7 @@ sotCodingSheet18 <- sotCodingSheet18%>%
 ```
 
 # Including only subjects which are in the Metadata for TL3.
-```{r}
+```{r, echo=FALSE}
 #Number of rows in the coding sheet before only keeping those subjects that are in the Metadata.
 nrow(sotCodingSheet16)
 nrow(sotCodingSheet18)
@@ -139,25 +138,21 @@ cleanedCodingSheet18 <- sotCodingSheet18 %>%
 
 write_csv(cleanedSotCodingSheet16, "TL3Data/cleanedSotCodingSheet16.csv")
 write_csv(cleanedCodingSheet18, "TL3Data/cleanedCodingSheet18.csv")
-```
 
-
-```{r}
 nrow(cleanedSotCodingSheet16)
 nrow(cleanedCodingSheet18)
 ```
 
 
-
 # Simply writting the csv
-```{r}
+```{r, echo=FALSE}
 write_csv(TL3MetadataRenamed, "TL3Data/TL3data_Renamed.csv")
 ```
 
 
 
 ## Recreating the Lena per Hour data values. 
-```{r}
+```{r, echo=FALSE}
 #Here we are doing the per hour values for 16 months
 perhour_16 <- sotCodingSheet16 %>% 
   group_by(SUBJECT) %>% 
@@ -251,7 +246,7 @@ write_csv(check_with_adams_16, "TL3Data/adamsPaperStats.csv")
 #Creating a data frame for the Distribution of Talk per 5 Minutes
 # Unclean: Mean Duration, SD Duration
 # Clean: Mean Duration, SD Duration
-```{r}
+```{r, echo=FALSE}
 distributionPerSegment16 <- sotCodingSheet16 %>%
   group_by(SUBJECT) %>%
   mutate(unclean_mean_awc = mean(AWC), unclean_sd_awc = sd(AWC),
@@ -277,7 +272,7 @@ distributionPerSegment16 <- read_csv("TL3Data/distributionPerSegment16.csv")
  
 ```
 
-```{r}
+```{r, echo=FALSE}
 distributionHourBin16 <- sotCodingSheet16 %>% 
   mutate(hour_bin = ifelse(Time < 1, 24, 
                     ifelse(Time >= 1 & Time < 2, 1, 
@@ -356,20 +351,4 @@ distributionPerHour16 <- distributionSumation16 %>%
 
 write_csv(distributionPerHour16, "TL3Data/distributionPerHour16.csv")
 ```
-
-#Load in CSVs for segment and hourly AWC, concrete and proportional (ith hour/ith-1hour) where ith-1 >= ith for all hours.
-```{r}
-
-
-
-
-hourlyOrdered16 <- read_csv("TL3Data/hourlyOrdredAwc16.csv") 
-hourlyProp16 <- read_csv("TL3Data/hourlyProportions.csv")
-segOrdered16 <- read_csv("TL3Data/segOrdredAwc16.csv") 
-segProp16 <- read_csv("TL3Data/segProportions.csv") 
-
-#csvAWCseg.unordered(sotCodingSheet16)
-#csvAWVseg.unorderedPercentile(sotCodingSheet16, .70)
-```
-
 
