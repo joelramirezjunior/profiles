@@ -30,7 +30,6 @@ distributionPerSegment16 <- read_csv("TL3Data/distributionPerSegment16.csv")
 distributionSumation16 <- read_csv("TL3Data/distributionSumation16.csv")
 sotCodingSheet16 <- read_csv("TL3Data/cleanedSotCodingSheet16.csv") 
 clusterValue <- read_csv("clusterMeasures.csv")
-
 TL3MetadataRenamed <- read_csv("TL3Data/TL3data_Renamed.csv")
 ```
 
@@ -176,86 +175,22 @@ child_dist_per_seg.unordered <- function(df, na.rm = TRUE, ...){
 ```
 
 
+# A Day in the Life of a Child...(on average)
 
-# Mean AWC with Standard Deviation of Mean AWC
+A childs day to day unordered AWC profile would look something like this. Where time is in military time just for the simplicity in plotting. We do see that it is very variable and also has a large window of talk, starting from 8 am to about 7pm. With AWC ranging from 0 words to 667 words within a 5 minute window. 
 
-The first plot is unclean mean awc X unclean standard deviation. This are measures for awc without cleaning for naps.
-- cleaning for naps is basically getting rid of all instances where the child is sleeping.
+```{r, echo = FALSE, message = FALSE}  
+subjectExample <- sotCodingSheet16 %>% 
+  filter(SUBJECT == 11003)
 
-The second plot is clean mean awc X clean standard deviation.
-```{r, echo = FALSE, message = FALSE}
-ggplot(distributionPerHour16, aes(unclean_mean_awc, unclean_sd_awc))+
-  geom_point() +
-   geom_smooth(method = "lm")
+ggplot(subjectExample, aes( x = Time, y = AWC )) +
+    geom_bar(stat = "identity",position = "dodge") +
+      theme_gray() +
+      ggtitle("Subject 11003 Profile of Segment Caregiver Talk")
 
-ggplot(distributionPerHour16, aes(clean_mean_awc, clean_sd_awc))+
-  geom_point() +
-   geom_smooth(method = "lm")
+
 ```
 
-
-# Plotting mean CTC with Std Dev CTC
-
-The first plot is unclean mean ctc X unclean ctc standard deviation. This are measures for ctc without cleaning for naps.
-
-The second plot is clean mean ctc X clean ctc standard deviation.
-```{r, echo = FALSE, message = FALSE}
-#Then, we will plot each, but first we will need to reshape the data frame into a long format
-ggplot(distributionPerSegment16, aes(unclean_mean_ctc, unclean_sd_ctc))+
-  geom_point()+
-   geom_smooth(method = "lm")
-
-ggplot(distributionPerSegment16, aes(clean_mean_ctc, clean_sd_ctc))+
-  geom_point()+
-   geom_smooth(method = "lm")
-```
-
-#Plotting mean CVC with Std Dev CVC
-
-The first plot is unclean mean CVC X unclean CVC standard deviation. This are measures for CVC without cleaning for naps.
-
-The second plot is clean mean CVC X clean CVC standard deviation.
-```{r cars}
-#Then, we will plot each, but first we will need to reshape the data frame into a long format
-ggplot(distributionPerSegment16, aes(unclean_mean_cvc, unclean_sd_cvc))+
-  geom_point()+
-   geom_smooth(method = "lm")
-
-ggplot(distributionPerSegment16, aes(clean_mean_cvc, clean_sd_cvc))+
-  geom_point()+
-   geom_smooth(method = "lm")
-```
-
-
-
-```{r }
-#Then, we will plot each, but first we will need to reshape the data frame into a long format
-# ggplot(distributionPerHour16, aes(unclean_mean_awc, unclean_sd_awc))+
-#   geom_point()+
-#    geom_smooth(method = "lm")
-# 
-# ggplot(distributionPerHour16, aes(clean_mean_awc, clean_sd_awc))+
-#   geom_point()+
-#    geom_smooth(method = "lm")
-```
-
-```{r }
-# #Then, we will plot each, but first we will need to reshape the data frame into a long format
-# ggplot(distributionPerHour16, aes(unclean_mean_ctc, unclean_sd_ctc))+
-#   geom_point()
-# 
-# ggplot(distributionPerHour16, aes(clean_mean_ctc, clean_sd_ctc))+
-#   geom_point()
-```
-
-```{r }
-#Then, we will plot each, but first we will need to reshape the data frame into a long format
-# ggplot(distributionPerHour16, aes(unclean_mean_cvc, unclean_sd_cvc))+
-#   geom_point()
-# 
-# ggplot(distributionPerHour16, aes(clean_mean_cvc, clean_sd_cvc))+
-#   geom_point()'
-```
 
 
 ```{r, echo = FALSE, message = FALSE}
@@ -274,41 +209,134 @@ talkFrequency <- distributionSumation16 %>%
 ```
 
 
-# Where is talk happening?
-First we have the unclean LENA histograms across all subjects. We have AWC, CTC, and CVC. 
+# So, where is talk happening?
+First we have the unclean LENA histogram across all subjects.
 Observations:
-  - There are two big dense periods throughout the day
-  - These periods are in the morning and in the evening, maybe due to parents coming and going from work?
+
+- There are two big dense periods throughout the day
+- These periods are in the morning and in the evening, maybe due to parents coming and going from work?
+
+
 ```{r, echo = FALSE, message = FALSE}
 ggplot(talkFrequency, aes(x = hour_bin,y = unclean_avg_awc_across_all_subjects)) +
     geom_bar(stat = "identity",position = "dodge") +
   theme_gray()
 
 
-ggplot(talkFrequency, aes(x = hour_bin,y = unclean_avg_ctc_across_all_subjects)) +
-    geom_bar(stat = "identity",position = "dodge") +
-  theme_gray()
-
-ggplot(talkFrequency, aes(x = hour_bin,y = unclean_avg_cvc_across_all_subjects)) +
-    geom_bar(stat = "identity",position = "dodge") +
-  theme_gray()
+# ggplot(talkFrequency, aes(x = hour_bin,y = unclean_avg_ctc_across_all_subjects)) +
+#     geom_bar(stat = "identity",position = "dodge") +
+#   theme_gray()
+# 
+# ggplot(talkFrequency, aes(x = hour_bin,y = unclean_avg_cvc_across_all_subjects)) +
+#     geom_bar(stat = "identity",position = "dodge") +
+#   theme_gray()
 ```
-Next we have the clean LENA histograms across all subjects. We have AWC, CTC, and CVC. 
-Observations:
-  - Similarly, here are two big dense periods throughout the day
-  - These periods are in the morning and in the evening, maybe due to parents coming and going from work.
+## Cleaning for Naps
+
+Cleaning for naps is basically getting rid of all instances where the child is sleeping.
+This decision was made as for the two samples which we are comparing, the Spanish group turned off the recorders when the child slept or sometimes for some window within the day. So, to make it comparible we get rid of instances when children are sleeping and/or napping. 
+
+# Mean AWC with Standard Deviation of Mean AWC
+
+The first plot is unclean mean awc X unclean standard deviation. These are measures for AWC without cleaning for naps.
+
+The second plot is clean mean awc X clean standard deviation.
+
 ```{r, echo = FALSE, message = FALSE}
-ggplot(talkFrequency, aes(x = hour_bin,y = clean_avg_awc_across_all_subjects)) +
-    geom_bar(stat = "identity",position = "dodge") +
-  theme_gray()
+ggplot(distributionPerHour16, aes(unclean_mean_awc, unclean_sd_awc))+
+  geom_point() +
+   geom_smooth(method = "lm")
 
-ggplot(talkFrequency, aes(x = hour_bin,y = clean_avg_ctc_across_all_subjects)) +
-    geom_bar(stat = "identity",position = "dodge") +
-  theme_gray()
+ggplot(distributionPerHour16, aes(clean_mean_awc, clean_sd_awc))+
+  geom_point() +
+   geom_smooth(method = "lm")
+```
 
-ggplot(talkFrequency, aes(x = hour_bin,y = clean_avg_cvc_across_all_subjects)) +
-    geom_bar(stat = "identity",position = "dodge") +
-  theme_gray()
+
+
+
+
+```{r, echo = FALSE, message = FALSE}
+# # Plotting mean CTC with Std Dev CTC
+# The first plot is unclean mean ctc X unclean ctc standard deviation. This are measures for ctc without cleaning for naps.
+# The second plot is clean mean ctc X clean ctc standard deviation.
+# #Then, we will plot each, but first we will need to reshape the data frame into a long format
+# ggplot(distributionPerSegment16, aes(unclean_mean_ctc, unclean_sd_ctc))+
+#   geom_point()+
+#    geom_smooth(method = "lm")
+# 
+# ggplot(distributionPerSegment16, aes(clean_mean_ctc, clean_sd_ctc))+
+#   geom_point()+
+#    geom_smooth(method = "lm")
+```
+
+
+```{r, echo = FALSE, message = FALSE}
+## Plotting mean CVC with Std Dev CVC
+# 
+# The first plot is unclean mean CVC X unclean CVC standard deviation. This are measures for CVC without cleaning for naps.
+# 
+# The second plot is clean mean CVC X clean CVC standard deviation.
+# #Then, we will plot each, but first we will need to reshape the data frame into a long format
+# ggplot(distributionPerSegment16, aes(unclean_mean_cvc, unclean_sd_cvc))+
+#   geom_point()+
+#    geom_smooth(method = "lm")
+# 
+# ggplot(distributionPerSegment16, aes(clean_mean_cvc, clean_sd_cvc))+
+#   geom_point()+
+#    geom_smooth(method = "lm")
+```
+
+
+
+```{r, echo = FALSE, message = FALSE}
+#Then, we will plot each, but first we will need to reshape the data frame into a long format
+# ggplot(distributionPerHour16, aes(unclean_mean_awc, unclean_sd_awc))+
+#   geom_point()+
+#    geom_smooth(method = "lm")
+# 
+# ggplot(distributionPerHour16, aes(clean_mean_awc, clean_sd_awc))+
+#   geom_point()+
+#    geom_smooth(method = "lm")
+```
+
+```{r, echo = FALSE, message = FALSE }
+# #Then, we will plot each, but first we will need to reshape the data frame into a long format
+# ggplot(distributionPerHour16, aes(unclean_mean_ctc, unclean_sd_ctc))+
+#   geom_point()
+# 
+# ggplot(distributionPerHour16, aes(clean_mean_ctc, clean_sd_ctc))+
+#   geom_point()
+```
+
+```{r, echo = FALSE, message = FALSE }
+#Then, we will plot each, but first we will need to reshape the data frame into a long format
+# ggplot(distributionPerHour16, aes(unclean_mean_cvc, unclean_sd_cvc))+
+#   geom_point()
+# 
+# ggplot(distributionPerHour16, aes(clean_mean_cvc, clean_sd_cvc))+
+#   geom_point()'
+```
+
+
+
+```{r, echo = FALSE, message = FALSE}
+# Next we have the clean LENA histograms across all subjects. We have AWC, CTC, and CVC. 
+# Observations:
+# 
+# - Similarly, here are two big dense periods throughout the day
+# - These periods are in the morning and in the evening, maybe due to parents coming and going from work.
+# ggplot(talkFrequency, aes(x = hour_bin,y = clean_avg_awc_across_all_subjects)) +
+#     geom_bar(stat = "identity",position = "dodge") +
+#   theme_gray()
+# 
+# ggplot(talkFrequency, aes(x = hour_bin,y = clean_avg_ctc_across_all_subjects)) +
+#     geom_bar(stat = "identity",position = "dodge") +
+#   theme_gray()
+# 
+# ggplot(talkFrequency, aes(x = hour_bin,y = clean_avg_cvc_across_all_subjects)) +
+#     geom_bar(stat = "identity",position = "dodge") +
+#   theme_gray()
 ```
 
 
@@ -360,16 +388,17 @@ ggplot(talkFrequency, aes(x = hour_bin,y = clean_avg_cvc_across_all_subjects)) +
 
 ```
 
-#Proportional Drop
+# Proportional Drop
 Proportional drop was a measure we came up with to measure variance in the child's moment-to-moment language environment.
-In a list of AWCs, orderd from smalled to largest where $AWC_i \geq AWC_{i=1}$, for a single child, proportional drop for two single observations can be seen as $P\Delta = 1 - AWC_{i-1}/AWC_i$ where $AWC_{i-1}/AWC_i$ is the percentage of AWC from one drop to the other. And, so to see the proportional drop we take $1 - AWC_{i-1}/AWC_i}$ to get the proportional difference between the $i^{th}$ and $i^{th}-1$. 
+In a list of AWCs, orderd from smalled to largest where $AWC_i \geq AWC_{i=1}$, for a single child, proportional drop for two single observations can be seen as $P\Delta = 1 - AWC_{i-1}/AWC_i$ where $AWC_{i-1}/AWC_i$ is the percentage of AWC from one drop to the other. And, so to see the proportional drop we take $1 - AWC_{i-1}/AWC_i$ to get the proportional difference between the $i^{th}$ and $i^{th}-1$. 
 
 We used two measures:
+
 - average proportional drop across the day
 - max drop throughout the day
 
 Observations: 
-  We saw that every child had at least two contigous segments with the same AWC count. Thus, all children had a mininum drop of 0.
+  We saw that every child had at least two contiguous segments with the same AWC count. Thus, all children had a mininum drop of 0.
   
 
 ```{r, echo = FALSE, message = FALSE}
@@ -384,12 +413,14 @@ segmentalDist16 <- merge(subjectPropDrop, distributionPerSegment16, by = 'SUBJEC
 ```
 
 Here we see the histogram proportional drop across the entire day as well as a summary of its statistics.
+
 ```{r, echo = FALSE, message = FALSE}
 hist(subjectPropDrop$avgPropDrop)
-summary(subjectPropDrop)
+summary(subjectPropDrop$avgPropDrop)
 ```
 
 Here are side by side graphs of average proportional drop against clean mean AWC and standard deviation AWC.
+
 ```{r, echo = FALSE, message = FALSE}
 pdXcma <- ggplot(segmentalDist16, aes(x = avgPropDrop, y = clean_mean_awc))+
   geom_point() + 
@@ -404,7 +435,8 @@ grid.arrange(pdXcma, pdXcsda, ncol=2)
 ```
 
 Here are side by side graphs of max proportional drop against clean mean AWC and standard deviation AWC.
-We see that they are not correlation at all.
+We see that they are not correlated at all and so at this point we decided to leave the measure alone.
+
 ```{r, echo = FALSE, message = FALSE}
 mxpXcma <- ggplot(segmentalDist16, aes(x = maxPropDrop, y = clean_mean_awc))+
   geom_point() + 
@@ -485,7 +517,8 @@ grid.arrange(mxpXcma, mxpXcsda, ncol=2)
 
 # Clustering Measures
 
-A childs day to day unordered AWC profile would look something like this.
+As we saw before, the language landscape of a child is very variable throughout the day. So how to we simplify this? 
+
 ```{r, echo = FALSE, message = FALSE}  
 subjectExample <- sotCodingSheet16 %>% 
   filter(SUBJECT == 11003)
@@ -495,7 +528,9 @@ ggplot(subjectExample, aes( x = Time, y = AWC )) +
       theme_gray() +
       ggtitle("Subject 11003 Profile of Segment Caregiver Talk")
 ```
-It is very sportatic, and so to see how individual differences in children's dense periods of talk have with respect to their later learning. We then only started to see how many instances of talk there were above each child's respective 70th percentile of AWC. These graphs look as such.
+
+
+To find periods of dense talk, we identified the highest 30% of AWC segments for each family, and then applied a k-means clustering algorithm to identify one or more consecutive 5 minute segments that were similar in AWC (i.e., clusters of talk).
 
 ```{r, echo = FALSE, message = FALSE}
 subjectExample <- sotCodingSheet16 %>% 
@@ -508,9 +543,10 @@ ggplot(subjectExample, aes( x = Time, y = AWC )) +
       ggtitle("Subject 11003 70th Percentile Profile of Segment Caregiver Talk")
 
 ```
+
 Thus, it simplifies the work we have to do by only looking at the top 30th percentile of AWCs for each child and also helps us better see the amounts of peaks a child has throughout the day. So when we run a kmeans custering algorithm, we run it on these top 30th percentile awcs for each child respectively.
 
-#K-Means Clustering
+# K-Means Clustering
 k-means clustering is a method of vector quantization, originally from signal processing, that aims to partition n observations into k clusters in which each observation belongs to the cluster with the nearest mean (cluster centers or cluster centroid), serving as a prototype of the cluster. 
 
 Given a set of observations $(x_1, x_2, ..., x_n)$, where each observation is a d-dimensional real vector, k-means clustering aims to partition the $n$ observations into $k (\leq n)$ sets $S = {S_1, S_2, ..., S_k}$ so as to minimize the within-cluster sum of squares (WCSS) (i.e. variance). Formally, the objective is to find:
@@ -519,16 +555,17 @@ ${\displaystyle {\underset {\mathbf {S} }{\operatorname {arg\,min} }}\sum _{i=1}
 
 Using the K-means clustering approach, we found these statistics.
 
--Range(0, 35) in the number of clusters found for each child. We are currently investigating why this number is so high.
--Mean number of of clusters is approximately 13.9.
--Average cluster Size (i.e. duration) was 2.07. This means that each cluster was approximately 10 minutes long.
+- Range(0, 35) in the number of clusters found for each child. We are currently investigating why this number is so high.
+- Mean number of of clusters is approximately 13.9.
+- Average cluster Size (i.e. duration) was 2.07. This means that each cluster was approximately 10 minutes long.
 
 To take into account differences in recording length, which had a range of 5 to 12 full hours (clean), we made the number of clusters a rate per hour. Current statistics are as follows:
--Mean: 1.413 clusters per hour.
--Median: 1.352 clusters per hour
+
+- Mean: 1.413 clusters per hour.
+- Median: 1.352 clusters per hour
 
 
-Clusters per hour turned out to correlate significantly with Mean AWC and Standard Deviation of Average AWC.
+Clusters per hour turned out to correlate significantly with Mean AWC and Standard Deviation of Average AWC. 
 
 
 ```{r, echo = FALSE, message = FALSE}
@@ -558,7 +595,7 @@ clusterPerHourXSTDAWC <- ggplot(clusterAndDistrubtionMeasures, aes(clusterPerHr,
 grid.arrange(clusterPerHourXMeanAWC, clusterPerHourXSTDAWC, ncol=2)
 ```
 
-Average cluster size was found not to correlate with AWC or number of clusters. 
+Average cluster size was found not to correlate with AWC or number of clusters as we see below.
 
 ```{r, echo = FALSE, message = FALSE}
 
@@ -579,7 +616,85 @@ grid.arrange(a, b, ncol=2)
 ```
 
 
+Next, we want to look at how these measures predict to later language outcomes. 
+
+# Clusters Against Vocabulary Size, Reaction Time, and Accuracy 3 Months Later.
+
+Children’s vocabulary size was assessed using the MacArthur-Bates Communicative Development Inventories (CDI) in English (Fenson et al. 2007) or Spanish (Jackson-Maldonado et al., 2003). This is a parent survey asking how many common words the child knows at 15 months. Children’s language processing efficiency was assessed in the Looking-While-Listening task (Fernald et al., 2006). Here, children are present with two pictures, a target and a distraction. Both are on opposite sides of a monitor. A voice says, 'Can you see the ____'. And so, the elapsed time it takes the child to look at the target picture from the distraction is the Reaction Time (RT) and Accuracy reflects the proportion of time fixating on the named picture. 
+
+
+## First, we predict to all outcome measures from Clusters per Hour
 ```{r, echo = FALSE, message = FALSE}
+# ggplot(clusterAndDistrubtionMeasures, aes(clusterPerHr, clean_mean_awc))+
+#   geom_point() +
+#   geom_smooth(method = "lm")
+# 
+# ggplot(clusterAndDistrubtionMeasures, aes(clusterPerHr, clean_sd_awc))+
+#   geom_point() +
+#    geom_smooth(method = "lm")
+
+clusterXCDI <- ggplot(clusterAndDistrubtionMeasures, aes(clusterPerHr, CDI_18C18C_WG))+
+  geom_point() +
+  geom_smooth(method = "lm") +
+   ggtitle("Predicting to Vocabulary") +
+  xlab("Clusters/Hour ~ 16 Months") + ylab("CDI at 18 Months")
+
+
+clusterXACC <- ggplot(clusterAndDistrubtionMeasures, aes(clusterPerHr, ACC_1818))+
+  geom_point() +
+   geom_smooth(method = "lm")+
+  ggtitle("Predicting to Acc") +
+  xlab("Clusters/Hour ~ 16 Months") + ylab("Acurracy at 18 Months")
+
+clusterXRT <- ggplot(clusterAndDistrubtionMeasures, aes(clusterPerHr, RT18A18C_NO1RT))+
+  geom_point() +
+   geom_smooth(method = "lm")+
+  ggtitle("Predicting to RT") +
+  xlab("Clusters/Hour ~ 16 Months") + ylab("Reaction Time at 18 Months")
+
+
+grid.arrange(clusterXCDI,clusterXACC, clusterXRT, ncol=3)
+```
+
+## Next, we predict to all outcome measures from Average Word Count
+```{r, echo = FALSE, message = FALSE}
+# ggplot(clusterAndDistrubtionMeasures, aes(clusterPerHr, clean_mean_awc))+
+#   geom_point() +
+#   geom_smooth(method = "lm")
+# 
+# ggplot(clusterAndDistrubtionMeasures, aes(clusterPerHr, clean_sd_awc))+
+#   geom_point() +
+#    geom_smooth(method = "lm")
+
+clusterXCDI <- ggplot(clusterAndDistrubtionMeasures, aes(clean_mean_awc, CDI_18C18C_WG))+
+  geom_point() +
+  geom_smooth(method = "lm") +
+   ggtitle("Predicting to Vocabulary") +
+  xlab("Mean AWC/Hour ~ 16 Months") + ylab("CDI at 18 Months")
+
+
+clusterXACC <- ggplot(clusterAndDistrubtionMeasures, aes(clean_mean_awc, ACC_1818))+
+  geom_point() +
+   geom_smooth(method = "lm")+
+  ggtitle("Predicting to Acc") +
+  xlab("Mean AWC/Hour ~ 16 Months") + ylab("Acurracy at 18 Months")
+
+clusterXRT <- ggplot(clusterAndDistrubtionMeasures, aes(clean_mean_awc, RT18A18C_NO1RT))+
+  geom_point() +
+   geom_smooth(method = "lm")+
+  ggtitle("Predicting to RT") +
+  xlab("Mean AWC/Hour ~ 16 Months") + ylab("Reaction Time at 18 Months")
+
+
+grid.arrange(clusterXCDI,clusterXACC, clusterXRT, ncol=3)
+```
+
+From these graphs we see that clusters/hour was significantly correlated with Accuracy and CDI score (p<.01). Critically, clusters/hour accounted for an additional 15% of the variance in CDI scores, after controlling for AWC (p = 0.012). It is important to note though that Mean AWC per Hour account for the majority of the variance for both Accuracy and Reaction Time.
+
+These results demonstrate that in addition to overall amount of talk, understanding dense periods of talk over the day provides a more nuanced view of the patterns of talk to young children. Importantly, the amount of dense talk provides additional predictive power when accounting for children's outcomes. Ongoing analyses of Spanish-speaking families will investigate if similar trends can be replicated in families from a different cultural and linguistic group. 
+
+```{r, echo = FALSE, message = FALSE}
+
 # #Then, we will plot each, but first we will need to reshape the data frame into a long format
 # ggplot(clusterAndDistrubtionMeasures, aes(nclusters, clean_mean_awc))+
 #   geom_point() +
@@ -588,6 +703,7 @@ grid.arrange(a, b, ncol=2)
 # cor.test(clusterAndDistrubtionMeasures$nclusters, clusterAndDistrubtionMeasures$clean_mean_awc, method = c("pearson"))
 # 
 # 
+
 # ggplot(clusterAndDistrubtionMeasures, aes(nclusters, clean_sd_awc))+
 #   geom_point() +
 #    geom_smooth(method = "lm")
@@ -615,6 +731,7 @@ grid.arrange(a, b, ncol=2)
 # 
 # 
 # 
+
 # #Predicting to Mean AWC 
 # model1 = lm(clean_mean_awc ~ nclusters, data = clusterAndDistrubtionMeasures)
 # summary(model1)
@@ -762,9 +879,6 @@ grid.arrange(a, b, ncol=2)
 # 
 # 
 # 
-# cor.test(clusterAndDistrubtionMeasures$clusterPerHr, clusterAndDistrubtionMeasures$CDI_18C18C_WG, method = c("pearson"))
-# cor.test(clusterAndDistrubtionMeasures$clusterPerHr, clusterAndDistrubtionMeasures$RT18A18C_NO1RT, method = c("pearson"))
-# cor.test(clusterAndDistrubtionMeasures$clusterPerHr, clusterAndDistrubtionMeasures$ACC_1818, method = c("pearson"))
 # 
 # 
 # ##predicting to cdi
