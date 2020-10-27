@@ -12,21 +12,19 @@ def returnCleanNPArray(fileName, LENAVariable):
         subject = 0
         for row in csv_reader:
             if line_count == 0:
-                print(f'Column names are {", ".join(row)}')
                 line_count += 1
 
             time.append(float(row["Time"]))
             value.append(float(row[LENAVariable]))
             subject = row['SUBJECT']
             line_count += 1
-        print("Done creating np array with LENA values")
         return subject, numpy.array(time) , numpy.array(value)
 
 
 def returnClusterMeasures(labels):
 
     if labels == []:
-        return 0,0 
+        return 0,0
     labels = labels.tolist()
     cntr = collections.Counter(labels)
 

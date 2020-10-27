@@ -1,3 +1,8 @@
+# Clustering
+# Author: Joel Ramirez Jr.
+# ------------------------
+# V 1.0
+
 import matplotlib.pyplot as plt
 import csv, collections, math, numpy
 import random
@@ -17,58 +22,34 @@ from sklearn.metrics import adjusted_rand_score
 path = "70thpercentile/*.csv"
 
 cluster_measures = []
+
+
+#Iterating through all Subjects in the path above, here we grab each respective
+#participants AWC above their respective 70th percentile
 for fname in glob.glob(path):
-    print(fname)
     subject, time, value = returnCleanNPArray(fname, "AWC")
 
-    # plt.plot(time, value)
-    # plt.show()
-
+    #needed to emphasize similarities in AWC as apposed to Time.
     time = 10000000*numpy.vstack(time)
     value = numpy.vstack(value)
 
     features = numpy.concatenate((time, value), axis = 1)
 
-    # kmeans = KMeans(
-    #     init="random",
-    #     n_clusters=3,
-    #     n_init=500,
-    #     max_iter=300,
-    #     random_state=42
-    # )
-    #
+
     kmeans_kwargs = {
         "init": "random",
         "n_init": 10,
         "max_iter": 300,
         "random_state": 42,
     }
-    #
-    # sse = []
-    # for k in range(1, len(time)):
-    #     print(f"Currently on cluster {k}")
-    #     kmeans = KMeans(n_clusters=k, **kmeans_kwargs)
-    #     kmeans.fit(features)
-    #     sse.append(kmeans.inertia_)
-    #
-    # plt.style.use("fivethirtyeight")
-    # plt.plot(range(1,len(time)), sse)
-    # plt.xticks(range(1, len(time)))
-    # plt.xlabel("Number of Clusters")
-    # plt.ylabel("SSE")
-    # plt.show()
-    #
-    # kl = KneeLocator(
-    #     range(1, len(time)), sse, curve="convex", direction="decreasing"
-    # )
-    #
-    # print(kl.elbow)
 
 
-    # A list holds the silhouette coefficients for each k
+    # A list holds the silhouette coefficients for each k. Here, this measures
+    # Basically tells you how good it would be to have k clusters for a certain participant
     silhouette_coefficients = []
 
-    # Notice you start at 2 clusters for silhouette coefficient
+    # Notice you start at 2 clusters for silhouette coefficient, as 1 cluster would
+    # just group all the points which is pointless.
     for k in range(2, len(time)-1):
         kmeans = KMeans(n_clusters=k, **kmeans_kwargs)
         kmeans.fit(features)
@@ -83,6 +64,8 @@ for fname in glob.glob(path):
     # plt.ylabel("Silhouette Coefficient")
     # plt.show()
 
+
+    ###making it at least 2 segments per cluster
 
     minima = argrelextrema(numpy.array(silhouette_coefficients), numpy.less)
 
@@ -112,32 +95,35 @@ for fname in glob.glob(path):
             kmeans.fit(features)
             labels, old_labels = kmeans.labels_, labels
 
+
+
+            clusterSize = []
+
+            newNum = 0
             for i in range(len(labels)-1):
                 # print(i)
                 used = set()
+
+
                 if i != 1:
                     if labels[i] in used:
                         previousMin = True
                         break
+
                     if labels[i] != labels[i+1]:
                         used.add(int(labels[i]))
+                        newNum = 0
+
+                    if labels[i] != labels[i+1] and newNum == 1:
+                        previousMin = True
+                        break
+                    newNum += 1
+
+
 
         if previousMin:
             labels = old_labels
             break
-
-
-
-            # kmeans.inertia_
-            #
-            #
-            # # Final locations of the centroid
-            # kmeans.cluster_centers_
-            #
-            #
-            # # The number of iterations required to converge
-            # kmeans.n_iter_
-
 
     # fig, (ax1) = plt.subplots(
     #     1, 1, figsize=(8, 6), sharex=True, sharey=True
@@ -176,3 +162,35 @@ with open('clusterMeasures.csv', 'w') as csvfile:
             nclus = i[1]
             mclussize = i[2]
             csvwriter.writerow([sub, nclus, mclussize])
+
+
+
+
+    # kmeans = KMeans(
+    #     init="random",
+    #     n_clusters=3,
+    #     n_init=500,
+    #     max_iter=300,
+    #     random_state=42
+    # )
+    #
+#
+# sse = []
+# for k in range(1, len(time)):
+#     print(f"Currently on cluster {k}")
+#     kmeans = KMeans(n_clusters=k, **kmeans_kwargs)
+#     kmeans.fit(features)
+#     sse.append(kmeans.inertia_)
+#
+# plt.style.use("fivethirtyeight")
+# plt.plot(range(1,len(time)), sse)
+# plt.xticks(range(1, len(time)))
+# plt.xlabel("Number of Clusters")
+# plt.ylabel("SSE")
+# plt.show()
+#
+# kl = KneeLocator(
+#     range(1, len(time)), sse, curve="convex", direction="decreasing"
+# )
+#
+# print(kl.elbow)
