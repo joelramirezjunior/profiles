@@ -110,13 +110,14 @@ for fname in glob.glob(path):
                         previousMin = True
                         break
 
-                    if labels[i] != labels[i+1]:
-                        used.add(int(labels[i]))
-                        newNum = 0
-
                     if labels[i] != labels[i+1] and newNum == 1:
                         previousMin = True
                         break
+                    else:
+                        if labels[i] != labels[i+1]:
+                            used.add(int(labels[i]))
+                            newNum = 0
+
                     newNum += 1
 
 
