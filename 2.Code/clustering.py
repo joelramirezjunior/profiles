@@ -29,6 +29,8 @@ cluster_measures = []
 for fname in glob.glob(path):
     subject, time, value = returnCleanNPArray(fname, "AWC")
 
+    print(subject)
+
     #needed to emphasize similarities in AWC as apposed to Time.
     time = 10000000*numpy.vstack(time)
     value = numpy.vstack(value)
@@ -146,9 +148,6 @@ for fname in glob.glob(path):
     clusterNum, clusterAvgSize = returnClusterMeasures(labels)
 
     cluster_measures.append([subject, clusterNum, clusterAvgSize])
-
-
-print(cluster_measures)
 
 
 with open('clusterMeasures.csv', 'w') as csvfile:
