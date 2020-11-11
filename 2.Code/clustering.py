@@ -14,7 +14,7 @@ from sklearn.datasets import make_blobs
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 from sklearn.preprocessing import StandardScaler
-from utilities import returnCleanNPArray, returnClusterMeasures
+from utilities import returnCleanNPArray, returnClusterMeasures, gini
 from sklearn.cluster import DBSCAN
 from sklearn.datasets import make_moons
 from sklearn.metrics import adjusted_rand_score
@@ -23,13 +23,12 @@ path = "70thpercentile/*.csv"
 
 cluster_measures = []
 
-
 #Iterating through all Subjects in the path above, here we grab each respective
 #participants AWC above their respective 70th percentile
 for fname in glob.glob(path):
+
     subject, time, value = returnCleanNPArray(fname, "AWC")
 
-    print(subject)
 
     #needed to emphasize similarities in AWC as apposed to Time.
     time = 10000000*numpy.vstack(time)
@@ -59,18 +58,9 @@ for fname in glob.glob(path):
         silhouette_coefficients.append(score)
 
 
-    # plt.style.use("fivethirtyeight")
-    # plt.plot(range(2, len(time)-1), silhouette_coefficients)
-    # plt.xticks(range(2, len(time)-1))
-    # plt.xlabel("Number of Clusters")
-    # plt.ylabel("Silhouette Coefficient")
-    # plt.show()
-
-
-    ###making it at least 2 segments per cluster
+    #making it at least 2 segments per cluster
 
     minima = argrelextrema(numpy.array(silhouette_coefficients), numpy.less)
-
 
     labels = []
     old_labels = []
@@ -97,35 +87,38 @@ for fname in glob.glob(path):
             kmeans.fit(features)
             labels, old_labels = kmeans.labels_, labels
 
-
-
             clusterSize = []
 
-            newNum = 0
+            newNum = 1
             for i in range(len(labels)-1):
-                # print(i)
+
                 used = set()
 
-
                 if i != 1:
+                    #Check if they are contiguous
                     if labels[i] in used:
                         previousMin = True
                         break
 
-                    if labels[i] != labels[i+1] and newNum == 1:
-                        previousMin = True
-                        break
-                    else:
-                        if labels[i] != labels[i+1]:
+                    #new num, keeps track of how many values are in a cluster
+                    #[1,5,2,2,2,2,3,3,3,3,3,3,5,5]
+
+                    #[1,1,1,1,1,2,2,2,2,3,3,3,3,3,3,4,5]
+
+                    if labels[i] != labels[i+1]:
+                        if newNum < 2:
+                            previousMin = True
+                            break
+                        else:
                             used.add(int(labels[i]))
                             newNum = 0
 
                     newNum += 1
 
 
-
         if previousMin:
             labels = old_labels
+            print('done')
             break
 
     # fig, (ax1) = plt.subplots(
@@ -138,30 +131,33 @@ for fname in glob.glob(path):
     # km_colors = [fte_colors[label] for label in labels]
     #
     # print(labels)
+    # clusterNum, clusterAvgSize = returnClusterMeasures(labels)
     #
-    #
-    # ax1.set_title(f"k-means\nSilhouette: {kmeans_silhouette}, whith {min+1} clusters", fontdict={"fontsize": 12} )
+    # ax1.set_title(f"k-means\nSilhouette: {kmeans_silhouette}, whith {clusterNum} clusters", fontdict={"fontsize": 12} )
     # ax1.scatter(features[:, 0], features[:, 1], c=km_colors)
     # ax1.grid()
     # plt.show()
 
-    clusterNum, clusterAvgSize = returnClusterMeasures(labels)
 
+
+
+    clusterNum, clusterAvgSize = returnClusterMeasures(labels)
     cluster_measures.append([subject, clusterNum, clusterAvgSize])
 
 
-with open('clusterMeasures.csv', 'w') as csvfile:
+with open('clusterMeasuresMin2.csv', 'w') as csvfile:
 
-        csvwriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-        header = ['SUBJECT', 'nclusters', 'avgclustersize']
-        csvwriter.writerow(header)
+    csvwriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+    header = ['SUBJECT', 'nclusters2Min', 'avgclustersize2Min']
+    csvwriter.writerow(header)
 
-        for i in cluster_measures:
+    for i in cluster_measures:
 
-            sub = i[0]
-            nclus = i[1]
-            mclussize = i[2]
-            csvwriter.writerow([sub, nclus, mclussize])
+        sub = i[0]
+        nclus = i[1]
+        mclussize = i[2]
+        csvwriter.writerow([sub, nclus, mclussize])
+
 
 
 

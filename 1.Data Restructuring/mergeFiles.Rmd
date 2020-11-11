@@ -146,7 +146,9 @@ nrow(cleanedCodingSheet18)
 
 # Simply writting the csv
 ```{r, echo=FALSE}
+
 write_csv(TL3MetadataRenamed, "TL3Data/TL3data_Renamed.csv")
+
 ```
 
 

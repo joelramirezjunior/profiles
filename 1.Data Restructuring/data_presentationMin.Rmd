@@ -29,7 +29,7 @@ distributionPerHour16 <- read_csv("TL3Data/distributionPerHour16.csv")
 distributionPerSegment16 <- read_csv("TL3Data/distributionPerSegment16.csv")
 distributionSumation16 <- read_csv("TL3Data/distributionSumation16.csv")
 sotCodingSheet16 <- read_csv("TL3Data/cleanedSotCodingSheet16.csv") 
-clusterValue <- read_csv("clusterMeasuresMin2.csv")
+clusterValuesSize2 <- read_csv("clusterMeasuresMin2.csv")
 TL3MetadataRenamed <- read_csv("TL3Data/TL3data_Renamed.csv")
 ```
 
@@ -570,7 +570,7 @@ Clusters per hour turned out to correlate significantly with Mean AWC and Standa
 
 ```{r, echo = FALSE, message = FALSE}
 
-clusterAndDistrubtionMeasures <- merge(clusterValue, distributionPerHour16, by = 'SUBJECT')
+clusterAndDistrubtionMeasures <- merge(clusterValuesMin, distributionPerHour16, by = 'SUBJECT') 
 
 clusterAndDistrubtionMeasures <- clusterAndDistrubtionMeasures %>% 
   mutate(clusterPerHr = nclusters/clean_total_hrs) 
@@ -882,15 +882,22 @@ These results demonstrate that in addition to overall amount of talk, understand
 # 
 # 
 # ##predicting to cdi
-# model1 = lm(CDI_18C18C_WG ~ clean_mean_awc , data = clusterAndDistrubtionMeasures)
-# summary(model1)
-# 
-# model2 = lm(CDI_18C18C_WG ~ clusterPerHr, data = clusterAndDistrubtionMeasures)
-# summary(model2)
-# 
-# model3 = lm(CDI_18C18C_WG ~ clean_mean_awc + clusterPerHr, data = clusterAndDistrubtionMeasures)
-# summary(model3)
-# 
+
+clusterAndDistrubtionMeasuresNoZeros <- clusterAndDistrubtionMeasures %>% 
+  filter(avgclustersize != 0)
+
+
+model1 = lm(ACC_1818 ~ clean_mean_awc , data = clusterAndDistrubtionMeasures)
+summary(model1)
+
+model2 = lm(ACC_1818 ~ nclusters, data = clusterAndDistrubtionMeasures)
+summary(model2)
+
+model3 = lm(ACC_1818 ~ clean_mean_awc + nclusters, data = clusterAndDistrubtionMeasures)
+summary(model3)
+
+
+
 # 
 # ##Predicting to RT 
 # model4 = lm(RT18A18C_NO1RT ~ clean_mean_awc , data = clusterAndDistrubtionMeasures)
@@ -975,5 +982,26 @@ These results demonstrate that in addition to overall amount of talk, understand
 # mean(clusterAndDistrubtionMeasures$clean_mean_awc)
 # summary(clusterAndDistrubtionMeasures)
 # 
+```
+```{r}
+
+
+clusterValueNoZero <- clusterValue %>% 
+  filter(avgclustersize != 0) 
+
+clusterValuesMinNoZero <- clusterValuesMin %>% 
+  filter(avgclustersize != 0) 
+  
+
+ggplot( clusterValue$nclusters, clusterValuesMin$nclusters,)
+
+ggplot(distributionPerHour16, aes(clusterValue$nclusters, clusterValuesMin$nclusters))+
+  geom_point() +
+   geom_smooth(method = "lm")
+
+
+summary(clusterValueNoZero$avgclustersize)
+summary(clusterValuesMinNoZero$avgclustersize)
+
 ```
 
