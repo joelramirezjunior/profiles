@@ -16,7 +16,7 @@ def truncate(number, decimals=0):
     factor = 10.0 ** decimals
     return math.trunc(number * factor) / factor
 
-def getSubjectList(dist, subjectList):
+def getSubjectList(dist, subjectList, subPos):
     """
     Returns a list of subject numbers.
     """
@@ -25,7 +25,7 @@ def getSubjectList(dist, subjectList):
 
 
     for i in range(1, len(dist)):
-        subject = float(dist[i][0])
+        subject = float(dist[i][subPos])
         if subject not in subjects:
             subjectList.append(subject)
             subjects.add(subject)
@@ -69,23 +69,22 @@ def subjectDictDataInsertion(diction, dist, subjectIndex, awcIndex, ctcIndex, cv
                  > CVC  [empty]
     """
     for row in dist:
+        print(row)
         subject = float(row[subjectIndex])
         hourBin = 0
 
-        if hourBinIndex != 9:
+        if hourBinIndex != 1:
             hourBin =  float(row[hourBinIndex])
         else:
             hourBin =  int(row[hourBinIndex])
 
         time = hourBin
 
-
         awc = float(row[awcIndex])
-
         ctc = float(row[ctcIndex])
         cvc = float(row[cvcIndex])
 
-        if hourBinIndex != 9:
+        if hourBinIndex != 1:
             frac, whole = math.modf(hourBin)
 
             if frac != 0:
@@ -94,6 +93,7 @@ def subjectDictDataInsertion(diction, dist, subjectIndex, awcIndex, ctcIndex, cv
                 hourBin = (whole)*12
             hourBin = int(round(hourBin))
 
+        print("This is the time:", hourBin)
         diction[subject]["awc"][hourBin] = awc
         diction[subject]["ctc"][hourBin] = ctc
         diction[subject]["cvc"][hourBin] = cvc
@@ -113,31 +113,31 @@ def findProportions(subjectDict, subjectDictSeg, subjectList, flag):
         subjPropSeg = {}
         for subject in subjectList:
 
-            subjPropHourly[subject] = {}
+            # subjPropHourly[subject] = {}
             subjPropSeg[subject] = {}
 
-            propListHourly = [-1]*24
+            # propListHourly = [-1]*24
             propListSeg =  [-1] * 288
 
             #unordered AWC list
-            awcList = subjectDict[subject]['awc']
+            # awcList = subjectDict[subject]['awc']
             awcListSeg = subjectDictSeg[subject]['awc']
             #ordered indecis for AWC
-            sortedHours = sorted(range(len(subjectDict[subject]['awc'])), key=lambda k: subjectDict[subject]['awc'][k], reverse=True)
+            # sortedHours = sorted(range(len(subjectDict[subject]['awc'])), key=lambda k: subjectDict[subject]['awc'][k], reverse=True)
             sortedSegemnts = sorted(range(len(subjectDictSeg[subject]['awc'])), key=lambda k: subjectDictSeg[subject]['awc'][k], reverse=True)
 
-            subjPropHourly[subject]['hours'] = sortedHours
-            subjPropHourly[subject]['prop'] = propListHourly
+            # subjPropHourly[subject]['hours'] = sortedHours
+            # subjPropHourly[subject]['prop'] = propListHourly
 
             subjPropSeg[subject]['segments'] = sortedSegemnts
             subjPropSeg[subject]['prop'] = propListSeg
 
-            for i in range(1, len(sortedHours)):
-
-                if subjectDict[subject]['awc'][sortedHours[i]] > 0 :
-                    subjPropHourly[subject]['prop'][i-1] = subjectDict[subject]['awc'][sortedHours[i]] / subjectDict[subject]['awc'][sortedHours[i-1]]
-                else:
-                    break
+            # for i in range(1, len(sortedHours)):
+            #
+            #     if subjectDict[subject]['awc'][sortedHours[i]] > 0 :
+            #         subjPropHourly[subject]['prop'][i-1] = subjectDict[subject]['awc'][sortedHours[i]] / subjectDict[subject]['awc'][sortedHours[i-1]]
+            #     else:
+            #         break
 
             for i in range(1, len(sortedSegemnts)):
 
@@ -153,7 +153,7 @@ def findProportions(subjectDict, subjectDictSeg, subjectList, flag):
 def createDictCSV(dictionary, subjectList, type):
 
     if type == 'hourly_prop':
-        with open('hourlyProportions.csv', 'w') as csvfile:
+        with open('hourlyProportionsEnglish.csv', 'w') as csvfile:
 
             spamwriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
             header = ['subject', 'prop', 'hour']
@@ -171,7 +171,7 @@ def createDictCSV(dictionary, subjectList, type):
 
 
     if type == 'seg_prop':
-        with open('segProportions.csv', 'w') as csvfile:
+        with open('segProportionsEnglish.csv', 'w') as csvfile:
 
             spamwriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
             header = ['subject', 'prop', 'time']
@@ -196,7 +196,7 @@ def createDictCSV(dictionary, subjectList, type):
 
 
     if type == 'hourly_ordered':
-        with open('hourlyOrdredAwc16.csv', 'w') as csvfile:
+        with open('hourlyOrdredAwc16English.csv', 'w') as csvfile:
             csvwriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
             header = ['Subject', 'AWC', 'hour']
             csvwriter.writerow(header)
@@ -211,7 +211,7 @@ def createDictCSV(dictionary, subjectList, type):
                     csvwriter.writerow([sub, awc, ind])
 
     if type == 'seg_ordered':
-        with open('segOrdredAwc16.csv', 'w') as csvfile:
+        with open('segOrdredAwc16English.csv', 'w') as csvfile:
 
             csvwriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
             header = ['Subject', 'AWC', 'hour']
@@ -236,35 +236,32 @@ def createDictCSV(dictionary, subjectList, type):
                     csvwriter.writerow([sub, awc, time])
 
 
-
-
 def main():
-    distSumHourly = genfromtxt("TL3Data/distributionSumation16.csv", delimiter=',')
-    distSumSegment= genfromtxt("TL3Data/cleanedSotCodingSheet16.csv", delimiter=',')
+    # distSumHourly = genfromtxt("1.Data Restructuring/English_Dataset/processedData/EnglishHourly.csv", delimiter=',')
+    distSumSegment= genfromtxt("1.Data Restructuring/englishCDS.csv", delimiter=',')
 
     #the first row is full of NA values, thus we are removing them
-    distSumHourly = distSumHourly[1:]
-
+    # distSumHourly = distSumHourly[1:]
+    #
     subjectDict = dict()
     subjectList = []
-
-    subjectList = getSubjectList(distSumHourly, subjectList)
-    subjectDict = createSubjectDict(subjectList, 24)
-
-    subjectDictHourly = subjectDictDataInsertion(subjectDict, distSumHourly, 0, 5, 6, 7, 9)
+    #
+    subjectList = getSubjectList(distSumSegment, subjectList, 12)
+    # subjectDict = createSubjectDict(subjectList, 24)
+    #
+    # subjectDictHourly = subjectDictDataInsertion(subjectDict, distSumHourly, 0, 6, 7, 8, 1)
 
     distSumSegment = distSumSegment[1:]
     subjectDictSeg = dict()
     subjectDictSeg = createSubjectDict(subjectList, 288)
-    subjectDictSeg = subjectDictDataInsertion(subjectDictSeg, distSumSegment,0, 13, 14, 15, 5)
-
+    subjectDictSeg = subjectDictDataInsertion(subjectDictSeg, distSumSegment,12, 1, 2, 3, 13)
 
     subjPropHourly, subjPropSeg = findProportions(subjectDict, subjectDictSeg, subjectList, 'ordered')
 
-    createDictCSV(subjPropHourly, subjectList, 'hourly_prop')
+    # createDictCSV(subjPropHourly, subjectList, 'hourly_prop')
     createDictCSV(subjPropSeg, subjectList, 'seg_prop')
 
-    createDictCSV(subjectDict, subjectList, 'hourly_ordered')
+    # createDictCSV(subjectDict, subjectList, 'hourly_ordered')
     createDictCSV(subjectDictSeg, subjectList, 'seg_ordered')
 
 

@@ -1,0 +1,686 @@
+---
+title: "CDS_Data"
+author: "Joel Ramirez"
+date: "2/4/2021"
+output: html_document
+---
+
+```{r, echo = FALSE, message = FALSE}
+library(tidyverse)
+library(readxl)
+library(ppcor)
+library(gridExtra)
+library(janitor)
+library(lubridate)
+library("Hmisc")
+```
+
+
+
+```{r}
+# What did you send to george?
+englishCDS <- read_csv('../4.Data/sent_to_george/english_for_classifier.csv')
+spanishCDS <- read_csv('../4.Data/sent_to_george/spanish_for_classifier.csv')
+
+# What do I really want?  TIME!
+englishDurationCDS <- englishCDS$dur_5min
+spanishDurationCDS <- spanishCDS$dur_5min
+```
+
+
+
+```{r}
+classifier <- read_csv('../4.Data/sent_to_george/xgb_preds_Joel.csv')
+
+classifier_spanish <- classifier %>%
+  filter(language == "Spanish") %>%
+  rename(SUBJECT = id) %>%
+  mutate(Duration = spanishDurationCDS*60) %>%
+  filter(CDSpred == 1)
+
+# write_csv(classifier_spanish, 'spanishCDS.csv')
+
+classifier_english <- classifier %>%
+  filter(language == "English") %>%
+  rename(SUBJECT = id) %>%
+  mutate(Duration = englishDurationCDS*60) %>%
+  filter(CDSpred == 1)
+
+# write_csv(classifier_english, 'englishCDS.csv')
+```
+```{r}
+# filenames <- list.files(path="E:/MergeCSV/",pattern="*.csv")
+#
+# dataset <- do.call("rbind",lapply(filenames,FUN=function(files){ read.csv(files)}))
+```
+
+
+# English
+## Recreating the Lena per Hour data values.
+```{r, echo=FALSE}
+#Here we are doing the per hour values for 16 months
+
+perhour_16CDS <- classifier_english %>%
+  group_by(SUBJECT) %>%
+  mutate(cleaned_lena_dur = (sum(Duration)/ 3600),
+         awc_perhr_cleaned = (sum(AWC))/cleaned_lena_dur,
+         ctc_perhr_cleaned = (sum(CTC))/cleaned_lena_dur,
+         cvc_perhr_cleaned = (sum(CVC))/cleaned_lena_dur) %>%
+  distinct(SUBJECT, cleaned_lena_dur,
+           awc_perhr_cleaned, ctc_perhr_cleaned, cvc_perhr_cleaned)
+summary(perhour_16CDS$cleaned_lena_dur)
+sd(perhour_16CDS$cleaned_lena_dur)
+# write_csv(perhour_16, "TL3Data/perHourLenaValues19.csv")
+```
+
+#Creating a data frame for the Distribution of Talk per 5 Minutes
+# Unclean: Mean Duration, SD Duration
+# Clean: Mean Duration, SD Duration
+
+```{r, echo=FALSE}
+distributionPerSegment16CDS <- classifier_english %>%
+  group_by(SUBJECT) %>%
+  mutate(clean_mean_awc = mean(AWC), clean_sd_awc = sd(AWC),
+         clean_mean_ctc = mean(CTC), clean_sd_ctc = sd(CTC),
+         clean_mean_cvc = mean(CVC), clean_sd_cvc = sd(CVC)) %>%
+  distinct(SUBJECT, clean_mean_awc, clean_sd_awc,
+         clean_mean_ctc, clean_sd_ctc,
+         clean_mean_cvc, clean_sd_cvc)
+
+# write_csv(distributionPerSegment16, "TL3Data/distributionPerSegment16.csv")
+#
+# distributionPerSegment16 <- read_csv("TL3Data/distributionPerSegment16.csv")
+#
+```
+
+```{r, echo=FALSE}
+distributionHourBin16CDS <- classifier_english %>%
+  mutate(hour_bin = ifelse(Time < 1, 24,
+                    ifelse(Time >= 1 & Time < 2, 1,
+                    ifelse(Time >= 2 & Time < 3, 2,
+                    ifelse(Time >= 3 & Time < 4, 3,
+                    ifelse(Time >= 4 & Time < 5, 4,
+                    ifelse(Time >= 5 & Time < 6, 5,
+                    ifelse(Time >= 6 & Time < 7, 6,
+                    ifelse(Time >= 7 & Time < 8, 7,
+                    ifelse(Time >= 8 & Time < 9, 8,
+                    ifelse(Time >= 9 & Time < 10, 9,
+                    ifelse(Time >= 10 & Time < 11, 10,
+                    ifelse(Time >= 11 & Time < 12, 11,
+                    ifelse(Time >= 12 & Time < 13, 12,
+                    ifelse(Time >= 13 & Time < 14, 13,
+                    ifelse(Time >= 14 & Time < 15, 14,
+                    ifelse(Time >= 15 & Time < 16, 15,
+                    ifelse(Time >= 16 & Time < 17, 16,
+                    ifelse(Time >= 17 & Time < 18, 17,
+                    ifelse(Time >= 18 & Time < 19, 18,
+                    ifelse(Time >= 19 & Time < 20, 19,
+                    ifelse(Time >= 20 & Time < 21, 20,
+                    ifelse(Time >= 21 & Time < 22, 21,
+                    ifelse(Time >= 22 & Time < 23, 22,
+                    ifelse(Time >= 23 & Time < 24, 23,
+                    ifelse(Time >= 24, 24, "Check" )))))))))))))))))))))))))) %>%
+  mutate(hour_bin = factor(hour_bin, levels = c(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+                                                11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+                                                21, 22, 23, 24))) %>%
+  distinct(SUBJECT, Duration, AWC, CTC, CVC, hour_bin)
+
+
+distributionHourBin16CDS <- distributionHourBin16CDS %>%
+  group_by(SUBJECT, hour_bin) %>%
+   mutate(clean_total_awc = sum(AWC),
+         clean_total_ctc = sum(CTC),
+         clean_total_cvc = sum(CVC),
+         clean_total_hrs = sum(Duration)/3600.00) %>%
+  distinct(SUBJECT,
+         clean_total_awc,
+         clean_total_ctc, clean_total_cvc, clean_total_hrs, hour_bin)
+
+distributionPerHour16CDS <- distributionHourBin16CDS %>%
+  group_by(SUBJECT) %>%
+   mutate(clean_mean_awc = sum(clean_total_awc)/sum(clean_total_hrs),
+         clean_sd_awc = sd(clean_total_awc),
+         clean_mean_ctc = sum(clean_total_ctc)/sum(clean_total_hrs),
+         clean_sd_ctc = sd(clean_total_ctc),
+         clean_mean_cvc = sum(clean_total_cvc)/sum(clean_total_hrs),
+         clean_sd_cvc = sd(clean_total_cvc),
+        clean_total_hrs = sum(clean_total_hrs)) %>%
+  distinct(SUBJECT, clean_mean_awc, clean_sd_awc, clean_mean_ctc, clean_sd_ctc, clean_mean_cvc,
+          clean_sd_cvc, clean_total_hrs)
+
+
+# write_csv(distributionPerHour16, "TL3Data/distributionPerHour16.csv")
+```
+
+```{r}
+cleanedDurationCDS <- distributionPerHour16CDS %>% 
+  mutate(recording = 'CDS' ) %>% 
+  distinct(clean_total_hrs, recording)
+
+cleanedDuration <- distributionPerHour16 %>%
+  mutate(recording = 'All talk') %>% 
+  distinct(clean_total_hrs, recording)
+
+comparingDurations <- bind_rows(cleanedDurationCDS,cleanedDuration)
+
+p<-ggplot(cleanedDurationCDS, aes(x=recording, y = clean_total_hrs)) +
+  geom_boxplot() +
+  coord_cartesian(ylim = c(0, 16))
+
+q<-ggplot(cleanedDuration, aes(x=recording, y = clean_total_hrs)) +
+  geom_boxplot()+
+  coord_cartesian(ylim = c(0, 16))
+
+p
+q
+```
+
+
+```{r, echo = FALSE, message = FALSE}
+segProp16 <- read_csv("../4.Data/CDS/segProportionsEnglish.csv") %>%
+  rename(SUBJECT = subject)
+
+clusterValue <- read_csv("../4.Data/CDS/clustersAt0.7with0.3SCenglish.csv")
+TL3MetadataRenamed <- read_csv("../4.Data/TL3Data/Metadata/TL3data_Renamed.csv")
+giniCoefficients <- read_csv("../4.Data/CDS/giniCoefenglishCDS.csv")
+clusterValue <- read_csv("../4.Data/CDS/clustersAt0.7with0.3SCenglish.csv")
+```
+
+
+
+```{r, echo = FALSE, message = FALSE}
+talkFrequency <- distributionHourBin16 %>%
+  group_by(hour_bin) %>%
+  mutate(clean_avg_awc_across_all_subjects = mean(clean_total_awc),
+         clean_avg_cvc_across_all_subjects = mean(clean_total_cvc),
+         clean_avg_ctc_across_all_subjects = mean(clean_total_ctc)) %>%
+  distinct(hour_bin,  clean_avg_awc_across_all_subjects, clean_avg_cvc_across_all_subjects, clean_avg_ctc_across_all_subjects)
+```
+
+
+
+
+```{r, echo = FALSE, message = FALSE}
+ggplot(distributionPerHour16, aes(clean_mean_awc, clean_sd_awc))+
+  geom_point() +
+   geom_smooth(method = "lm")
+```
+
+
+```{r, echo = FALSE, message = FALSE}
+#Loading in overall proportional difference.
+subjectPropDrop <- segProp16 %>%
+  group_by(SUBJECT) %>%
+  mutate(propDrop = 1-prop) %>%
+  mutate(avgPropDrop = mean(propDrop), maxPropDrop = max(propDrop), minPropDrop = min(propDrop)) %>%
+  distinct(avgPropDrop, maxPropDrop, minPropDrop)
+
+segmentalDist16 <- merge(subjectPropDrop, distributionPerSegment16, by = 'SUBJECT')
+```
+
+
+<!-- Here are side by side graphs of average proportional drop against clean mean AWC and standard deviation AWC. -->
+
+<!-- ```{r, echo = FALSE, message = FALSE} -->
+<!-- pdXcma <- ggplot(segmentalDist16, aes(x = avgPropDrop, y = clean_mean_awc))+ -->
+<!--   geom_point() +  -->
+<!--   geom_smooth(method = "lm") -->
+
+<!-- pdXcsda <- ggplot(segmentalDist16, aes(x = avgPropDrop, y = clean_sd_awc))+ -->
+<!--   geom_point() +  -->
+<!--   geom_smooth(method = "lm") -->
+
+<!-- grid.arrange(pdXcma, pdXcsda, ncol=2) -->
+
+<!-- ``` -->
+
+<!-- Here are side by side graphs of max proportional drop against clean mean AWC and standard deviation AWC. -->
+<!-- We see that they are not correlated at all and so at this point we decided to leave the measure alone. -->
+
+<!-- ```{r, echo = FALSE, message = FALSE} -->
+<!-- mxpXcma <- ggplot(segmentalDist16, aes(x = maxPropDrop, y = clean_mean_awc))+ -->
+<!--   geom_point() +  -->
+<!--   geom_smooth(method = "lm") -->
+
+<!-- mxpXcsda <- ggplot(segmentalDist16, aes(x = maxPropDrop, y = clean_sd_awc))+ -->
+<!--   geom_point() +  -->
+<!--   geom_smooth(method = "lm") -->
+
+
+<!-- grid.arrange(mxpXcma, mxpXcsda, ncol=2) -->
+
+<!-- ``` -->
+
+<!-- # Clustering Measures -->
+
+<!-- As we saw before, the language landscape of a child is very variable throughout the day. So how to we simplify this?  -->
+
+<!-- ```{r, echo = FALSE, message = FALSE}   -->
+<!-- subjectExample <- sotCodingSheet16 %>%  -->
+<!--   filter(SUBJECT == 11003) -->
+
+<!-- ggplot(subjectExample, aes( x = Time, y = AWC )) + -->
+<!--     geom_bar(stat = "identity",position = "dodge") + -->
+<!--       theme_gray() + -->
+<!--       ggtitle("Subject 11003 Profile of Segment Caregiver Talk") -->
+<!-- ``` -->
+
+
+<!-- To find periods of dense talk, we identified the highest 30% of AWC segments for each family, and then applied a k-means clustering algorithm to identify one or more consecutive 5 minute segments that were similar in AWC (i.e., clusters of talk). -->
+
+<!-- ```{r, echo = FALSE, message = FALSE} -->
+<!-- subjectExample <- sotCodingSheet16 %>%  -->
+<!--   filter(SUBJECT == 11003) %>%  -->
+<!--   filter(AWC >= quantile(sotCodingSheet16$AWC, probs = c(.7))) -->
+
+<!-- ggplot(subjectExample, aes( x = Time, y = AWC )) + -->
+<!--     geom_bar(stat = "identity",position = "dodge") + -->
+<!--       theme_gray() + -->
+<!--       ggtitle("Subject 11003 70th Percentile Profile of Segment Caregiver Talk") -->
+
+<!-- ``` -->
+
+<!-- Thus, it simplifies the work we have to do by only looking at the top 30th percentile of AWCs for each child and also helps us better see the amounts of peaks a child has throughout the day. So when we run a kmeans custering algorithm, we run it on these top 30th percentile awcs for each child respectively. -->
+
+<!-- # K-Means Clustering -->
+<!-- k-means clustering is a method of vector quantization, originally from signal processing, that aims to partition n observations into k clusters in which each observation belongs to the cluster with the nearest mean (cluster centers or cluster centroid), serving as a prototype of the cluster.  -->
+
+<!-- Given a set of observations $(x_1, x_2, ..., x_n)$, where each observation is a d-dimensional real vector, k-means clustering aims to partition the $n$ observations into $k (\leq n)$ sets $S = {S_1, S_2, ..., S_k}$ so as to minimize the within-cluster sum of squares (WCSS) (i.e. variance). Formally, the objective is to find: -->
+
+<!-- ${\displaystyle {\underset {\mathbf {S} }{\operatorname {arg\,min} }}\sum _{i=1}^{k}\sum _{\mathbf {x} \in S_{i}}\left\|\mathbf {x} -{\boldsymbol {\mu }}_{i}\right\|^{2}={\underset {\mathbf {S} }{\operatorname {arg\,min} }}\sum _{i=1}^{k}|S_{i}|\operatorname {Var} S_{i}}$ -->
+
+<!-- Using the K-means clustering approach, where a cluster can be 1 point alone, we found these statistics. -->
+
+<!-- - Range(0, 35) in the number of clusters found for each child. We are currently investigating why this number is so high. -->
+<!-- - Mean number of of clusters is approximately 13.9. -->
+<!-- - Average cluster Size (i.e. duration) was 2.07 (Less Constrained 1.257422). This means that each cluster was approximately 10 minutes long. -->
+
+<!-- To take into account differences in recording length, which had a range of 5 to 12 full hours (clean), we made the number of clusters a rate per hour. Current statistics are as follows: -->
+
+<!-- - Mean: 1.413 clusters per hour.  (Less Constrained 2.165808) -->
+<!-- - Median: 1.352 clusters per hour -->
+
+
+<!-- Clusters per hour turned out to correlate significantly with Mean AWC and Standard Deviation of Average AWC.  -->
+
+
+```{r, echo = FALSE, message = FALSE}
+clusterAndDistrubtionMeasures <- merge(clusterValue, distributionPerHour16, by = 'SUBJECT')
+clusterAndDistrubtionMeasures <- clusterAndDistrubtionMeasures %>%
+  mutate(clusterPerHr = nclusters/clean_total_hrs,
+         avgClusterDensityPerHr = avgClusterDensity/clean_total_hrs)
+
+clusterAndDistrubtionMeasures <- merge(clusterAndDistrubtionMeasures, TL3MetadataRenamed, by = 'SUBJECT')
+clusterAndDistrubtionMeasures <- merge(clusterAndDistrubtionMeasures,giniCoefficients, by = 'SUBJECT')
+
+# correlationsToFind <- clusterAndDistrubtionMeasures %>%
+#   distinct(SUBJECT, nclusters, avgClustersize, avgClusterDensity, avgClusterDensityPerHr, clean_total_hrs,
+#            clean_mean_awc, clean_sd_awc, clusterPerHr, MOM_YRS_EDU, CDI_18C18C_WG, ACC_1818, RT18A18C_NO1RT, gini)
+
+correlationsToFind <- clusterAndDistrubtionMeasures %>%
+  distinct(SUBJECT,clean_mean_awc, CDI_18C18C_WG, ACC_1818, RT18A18C_NO1RT) %>% 
+  rename( CDI = CDI_18C18C_WG, ACC = ACC_1818, RT = RT18A18C_NO1RT)
+
+
+pcor(correlationsToFind)
+# write_csv(correlationsToFind, 'sendToVirginiaEnglish.csv')
+
+```
+
+
+```{r}
+mean(clusterAndDistrubtionMeasures$clean_mean_awc)
+sd(clusterAndDistrubtionMeasures$clean_mean_awc)
+range(clusterAndDistrubtionMeasures$clean_mean_awc)
+
+clusterAndDistrubtionMeasures <- clusterAndDistrubtionMeasures %>% 
+  filter(clusterPerHr > 0)
+
+mean(clusterAndDistrubtionMeasures$clusterPerHr)
+sd(clusterAndDistrubtionMeasures$clusterPerHr)
+range(clusterAndDistrubtionMeasures$clusterPerHr)
+
+mean(clusterAndDistrubtionMeasures$gini)
+sd(clusterAndDistrubtionMeasures$gini)
+range(clusterAndDistrubtionMeasures$gini)
+```
+
+
+```{r}
+
+ggplot(correlationsToFind, aes(gini, CDI)) +
+  geom_point() +
+   ggtitle(label = "Gini and CDI",
+              subtitle = "English-Speaking Children: CDS") +
+  geom_smooth(method = "lm")+
+  xlab("Gini") + ylab("CDI")
+
+ggplot(correlationsToFind, aes(clusterPerHr, CDI)) +
+  geom_point() +
+   ggtitle(label = "Clusters Per Hour and CDI",
+              subtitle = "English-Speaking Children: CDS") +
+  geom_smooth(method = "lm")+
+  xlab("Clusters/Hour") + ylab("CDI")
+
+# ggplot(meaningfulDifferences, aes(gini, ACC)) +
+#   geom_point() +
+#    ggtitle(label = "Gini and Accuracy",
+#               subtitle = "English-Speaking Children: CDS") +
+#   geom_smooth(method = "lm") +
+#   xlab("Gini") + ylab("Accuracy")
+# 
+# ggplot(meaningfulDifferences, aes(clusterPerHr, ACC)) +
+#   geom_point() +
+#    ggtitle(label = "Clusters Per Hour and Accuracy",
+#               subtitle = "English-Speaking Children: CDS") +
+#   geom_smooth(method = "lm") +
+#   xlab("Clusters/Hour") + ylab("Accuracy")
+
+ggplot(correlationsToFind, aes(gini, RT)) +
+  geom_point() +
+   ggtitle(label = "Gini and RT",
+              subtitle = "English-Speaking Children: CDS") +
+  geom_smooth(method = "lm") +
+  xlab("Gini") + ylab("Reaction Time")
+
+ggplot(correlationsToFind, aes(clusterPerHr, RT)) +
+  geom_point() +
+   ggtitle(label = "Clusters Per Hour and RT",
+              subtitle = "English-Speaking Children: CDS") +
+  geom_smooth(method = "lm") +
+  xlab("Clusters/Hour") + ylab("Reaction Time")
+
+```
+ 
+
+# Starting The Spanish Dataset
+
+```{r, echo = FALSE, message = FALSE}
+
+segProp16 <- read_csv("../4.Data/CDS/segProportionsSpanish.csv") %>%
+  rename(SUBJECT = subject)%>% 
+  filter( SUBJECT != "424" & SUBJECT < 445 ) %>%
+  filter( SUBJECT != "345" & SUBJECT != "344") %>%
+  filter( SUBJECT != "271" & SUBJECT != "276") %>%
+  filter( SUBJECT != "307" & SUBJECT != "444") %>% 
+  filter( SUBJECT != "202" & SUBJECT != "436") %>% 
+   filter( SUBJECT != "330" & SUBJECT != 440)
+
+  
+clusterValue <- read_csv("../4.Data/CDS/clustersAt0.7with0.3SCspanish.csv") %>% 
+  filter( SUBJECT != "424" & SUBJECT < 445 ) %>%
+  filter( SUBJECT != "345" & SUBJECT != "344") %>%
+  filter( SUBJECT != "271" & SUBJECT != "276") %>%
+  filter( SUBJECT != "307" & SUBJECT != "444") %>% 
+  filter( SUBJECT != "202" & SUBJECT != "436") %>% 
+   filter( SUBJECT != "330" & SUBJECT != 440)
+
+
+outcomeMeasures <- read_csv("../4.Data/Spanish/outcomes_spanish.csv") %>%
+  mutate_if(is.integer, ~replace(., is.na(.), 0)) %>%
+  mutate_if(is.numeric, ~replace(., is.na(.), 0)) %>%
+  mutate_if(is.character, ~replace(., is.na(.), "Empty")) %>%
+  filter(SUBJECT %in% classifier_spanish$SUBJECT) %>%
+  distinct(SUBJECT, CDI, RT, ACC)
+
+outcomeMeasures <- as.data.frame(lapply(outcomeMeasures,as.numeric))
+
+
+outcomeMeasures <- as.data.frame(lapply(outcomeMeasures,as.numeric)) %>% 
+  filter( SUBJECT != "424" & SUBJECT < 445 ) %>%
+  filter( SUBJECT != "345" & SUBJECT != "344") %>%
+  filter( SUBJECT != "271" & SUBJECT != "276") %>%
+  filter( SUBJECT != "307" & SUBJECT != "444") %>% 
+  filter( SUBJECT != "202" & SUBJECT != "436") %>% 
+   filter( SUBJECT != "330" & SUBJECT != 440)
+
+
+giniCoefficients <- read_csv("../4.Data/CDS/giniCoefspanishCDS.csv")%>% 
+  filter( SUBJECT != "424" & SUBJECT < 445 ) %>%
+  filter( SUBJECT != "345" & SUBJECT != "344") %>%
+  filter( SUBJECT != "271" & SUBJECT != "276") %>%
+  filter( SUBJECT != "307" & SUBJECT != "444") %>% 
+  filter( SUBJECT != "202" & SUBJECT != "436") %>% 
+   filter( SUBJECT != "330" & SUBJECT != 440)
+
+clusterValue <- read_csv("../4.Data/CDS/clustersAt0.7with0.3SCspanish.csv") %>% 
+  filter( SUBJECT != "424" & SUBJECT < 445 ) %>%
+  filter( SUBJECT != "345" & SUBJECT != "344") %>%
+  filter( SUBJECT != "271" & SUBJECT != "276") %>%
+  filter( SUBJECT != "307" & SUBJECT != "444") %>% 
+  filter( SUBJECT != "202" & SUBJECT != "436") %>% 
+   filter( SUBJECT != "330" & SUBJECT != 440)
+
+
+```
+
+
+
+```{r}
+spanishDataset <- classifier_spanish  %>%
+  mutate(Time = as.double(Time)) %>% 
+  filter( SUBJECT != "424" & SUBJECT < 445 ) %>%
+  filter( SUBJECT != "345" & SUBJECT != "344") %>%
+  filter( SUBJECT != "271" & SUBJECT != "276") %>%
+  filter( SUBJECT != "307" & SUBJECT != "444") %>% 
+  filter( SUBJECT != "202" & SUBJECT != "436") %>% 
+  filter( SUBJECT != "330" & SUBJECT != 440)
+
+
+perHourSpanish <- spanishDataset %>%
+  group_by(SUBJECT) %>%
+  mutate(cleaned_lena_dur = (sum(Duration)/ 3600),
+         #here we are getting the perhour values of the Lena statistics
+         awc_perhr_cleaned = (sum(AWC))/cleaned_lena_dur,
+         ctc_perhr_cleaned = (sum(CTC))/cleaned_lena_dur,
+         cvc_perhr_cleaned = (sum(CVC))/cleaned_lena_dur) %>%
+  distinct(SUBJECT, cleaned_lena_dur,
+           awc_perhr_cleaned, ctc_perhr_cleaned, cvc_perhr_cleaned)
+
+# write_csv(perHourSpanish, "Spanish_Dataset/processedData/perHourSpanish.csv")
+
+spanishPerSegment <- spanishDataset %>%
+  group_by(SUBJECT) %>%
+  mutate(clean_mean_awc = mean(AWC), clean_sd_awc = sd(AWC),
+         clean_mean_ctc = mean(CTC), clean_sd_ctc = sd(CTC),
+         clean_mean_cvc = mean(CVC), clean_sd_cvc = sd(CVC)) %>%
+  distinct(SUBJECT, clean_mean_awc, clean_sd_awc,
+         clean_mean_ctc, clean_sd_ctc,
+         clean_mean_cvc, clean_sd_cvc)
+#
+# write_csv(spanishPerSegment, "Spanish_Dataset/processedData/spanishPerSegment.csv")
+
+spanishHourBin <- spanishDataset %>%
+mutate(hour_bin = ifelse(Time < 1, 24,
+  ifelse(Time >= 1 & Time < 2, 1,
+    ifelse(Time >= 2 & Time < 3, 2,
+      ifelse(Time >= 3 & Time < 4, 3,
+        ifelse(Time >= 4 & Time < 5, 4,
+          ifelse(Time >= 5 & Time < 6, 5,
+            ifelse(Time >= 6 & Time < 7, 6,
+              ifelse(Time >= 7 & Time < 8, 7,
+                ifelse(Time >= 8 & Time < 9, 8,
+                  ifelse(Time >= 9 & Time < 10, 9,
+                    ifelse(Time >= 10 & Time < 11, 10,
+                      ifelse(Time >= 11 & Time < 12, 11,
+                        ifelse(Time >= 12 & Time < 13, 12,
+                          ifelse(Time >= 13 & Time < 14, 13,
+                            ifelse(Time >= 14 & Time < 15, 14,
+                              ifelse(Time >= 15 & Time < 16, 15,
+                                ifelse(Time >= 16 & Time < 17, 16,
+                                  ifelse(Time >= 17 & Time < 18, 17,
+                                    ifelse(Time >= 18 & Time < 19, 18,
+                                      ifelse(Time >= 19 & Time < 20, 19,
+                                        ifelse(Time >= 20 & Time < 21, 20,
+                                          ifelse(Time >= 21 & Time < 22, 21,
+                                            ifelse(Time >= 22 & Time < 23, 22,
+                                              ifelse(Time >= 23 & Time < 24, 23,
+                                                ifelse(Time >= 24, 24, "Check" )))))))))))))))))))))))))) %>%
+                                                mutate(hour_bin = factor(hour_bin, levels = c(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+                                                  11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+                                                  21, 22, 23)))
+
+
+spanishDistribution <- spanishHourBin %>%
+  group_by(SUBJECT, hour_bin) %>%
+   mutate(clean_total_awc = sum(AWC),
+         clean_total_ctc = sum(CTC),
+         clean_total_cvc = sum(CVC),
+         clean_total_hrs = sum(Duration)/3600.00) %>%
+  distinct(SUBJECT,
+         clean_total_awc,
+         clean_total_ctc, clean_total_cvc, clean_total_hrs, hour_bin)
+
+# write_csv(spanishDistribution, "Spanish_Dataset/processedData/SpanishHourly.csv")
+
+spanishPerHour <- spanishDistribution %>%
+  group_by(SUBJECT) %>%
+   mutate(clean_mean_awc = sum(clean_total_awc)/sum(clean_total_hrs),
+         clean_sd_awc = sd(clean_total_awc),
+         clean_mean_ctc = sum(clean_total_ctc)/sum(clean_total_hrs),
+         clean_sd_ctc = sd(clean_total_ctc),
+         clean_mean_cvc = sum(clean_total_cvc)/sum(clean_total_hrs),
+         clean_sd_cvc = sd(clean_total_cvc),
+        clean_total_hrs = sum(clean_total_hrs)) %>%
+  distinct(SUBJECT, clean_mean_awc, clean_sd_awc, clean_mean_ctc, clean_sd_ctc, clean_mean_cvc,
+          clean_sd_cvc, clean_total_hrs)
+
+summary(spanishPerHour$clean_mean_awc )
+sd(spanishPerHour$clean_mean_awc)
+# write_csv(spanishPerHour, "Spanish_Dataset/processedData/spanishPerHour.csv")
+```
+
+
+
+```{r}
+subjectPropDrop <- segProp16 %>%
+  group_by(SUBJECT) %>%
+  mutate(propDrop = 1-prop) %>%
+  mutate(avgPropDrop = mean(propDrop), maxPropDrop = max(propDrop), minPropDrop = min(propDrop)) %>%
+  distinct(avgPropDrop, maxPropDrop, minPropDrop)
+
+
+
+
+clusterAndDistrubtionMeasures <- merge(clusterValue, spanishPerHour, by = 'SUBJECT')
+
+clusterAndDistrubtionMeasures <- clusterAndDistrubtionMeasures %>%
+  mutate(clusterPerHr = nclusters/clean_total_hrs,
+         avgClusterDensityPerHr = avgClusterDensity/clean_total_hrs) %>% 
+  filter(clusterPerHr != "0")
+
+clusterAndDistrubtionMeasures <- merge(clusterAndDistrubtionMeasures, outcomeMeasures, by = 'SUBJECT')
+clusterAndDistrubtionMeasures <- merge(clusterAndDistrubtionMeasures,giniCoefficients, by = 'SUBJECT')
+clusterAndDistrubtionMeasures <- merge(clusterAndDistrubtionMeasures,subjectPropDrop, by = 'SUBJECT')
+
+# 
+# clusterAndDistrubtionMeasuresCDI <- clusterAndDistrubtionMeasures %>%
+#   filter(CDI != -9) %>%
+#   distinct(SUBJECT, nclusters, avgClustersize, minClusterAWC, maxClusterAWC, avgClusterDensity, clean_total_hrs,  clean_mean_awc, clean_sd_awc, avgClusterDensityPerHr, gini,avgPropDrop, clusterPerHr, CDI)
+# 
+# clusterAndDistrubtionMeasuresACC <- clusterAndDistrubtionMeasures %>%
+#   filter(ACC != -9 ) %>%
+#   distinct(SUBJECT, nclusters, avgClustersize, minClusterAWC, maxClusterAWC, avgClusterDensity,  clean_total_hrs, clean_mean_awc, clean_sd_awc, avgClusterDensityPerHr, gini,avgPropDrop, clusterPerHr, ACC)
+# 
+# 
+# clusterAndDistrubtionMeasuresRT <- clusterAndDistrubtionMeasures %>%
+#   filter(RT >= 0 ) %>%
+#    distinct(SUBJECT, nclusters, avgClustersize, minClusterAWC, maxClusterAWC, avgClusterDensity,clean_total_hrs, clean_mean_awc, clean_sd_awc, avgClusterDensityPerHr, gini, avgPropDrop, clusterPerHr, RT)
+
+summary(clusterAndDistrubtionMeasures$clusterPerHr )
+sd(clusterAndDistrubtionMeasures$clusterPerHr)
+
+
+summary(clusterAndDistrubtionMeasures$gini )
+sd(clusterAndDistrubtionMeasures$gini)
+
+
+clusterAndDistrubtionMeasuresCDI <- clusterAndDistrubtionMeasures %>% 
+  filter(CDI > -9) %>% 
+  distinct(SUBJECT, clean_mean_awc, gini, clusterPerHr, CDI)
+
+
+pcor(clusterAndDistrubtionMeasuresCDI)
+
+clusterAndDistrubtionMeasuresACC <- clusterAndDistrubtionMeasures %>% 
+  filter(ACC != -9 ) %>% 
+  distinct(SUBJECT,clean_mean_awc, gini, clusterPerHr, ACC)
+  
+pcor(clusterAndDistrubtionMeasuresACC)
+
+clusterAndDistrubtionMeasuresRT <- clusterAndDistrubtionMeasures %>% 
+  filter(RT >= 0 ) %>% 
+   distinct(SUBJECT,clean_mean_awc, gini, clusterPerHr, RT)
+
+pcor(clusterAndDistrubtionMeasuresRT)
+
+
+# write_csv(clusterAndDistrubtionMeasuresCDI, 'CDS_CDI_Spanish.csv')
+#
+# write_csv(clusterAndDistrubtionMeasuresACC, 'CDS_ACC_Spanish.csv')
+#
+# write_csv(clusterAndDistrubtionMeasuresRT, 'CDS_RT_Spanish.csv')
+```
+
+```{r}
+
+
+
+ggplot(clusterAndDistrubtionMeasuresCDI, aes(gini, CDI)) +
+  geom_point() +
+   ggtitle(label = "Gini and CDI",
+              subtitle = "Spanish-Speaking Children: CDS") +
+  geom_smooth(method = "lm")+
+  xlab("Gini") + ylab("CDI")
+
+ggplot(clusterAndDistrubtionMeasuresCDI, aes(clusterPerHr, CDI)) +
+  geom_point() +
+   ggtitle(label = "Clusters Per Hour and CDI",
+              subtitle = "Spanish-Speaking Children: CDS") +
+  geom_smooth(method = "lm")+
+  xlab("Clusters/Hour") + ylab("CDI")
+
+# ggplot(clusterAndDistrubtionMeasuresACC, aes(gini, ACC)) +
+#   geom_point() +
+#    ggtitle(label = "Gini and Accuracy",
+#               subtitle = "Spanish-Speaking Children: CDS") +
+#   geom_smooth(method = "lm") +
+#   xlab("Gini") + ylab("Accuracy")
+# 
+# ggplot(clusterAndDistrubtionMeasuresACC, aes(clusterPerHr, ACC)) +
+#   geom_point() +
+#    ggtitle(label = "Clusters Per Hour and Accuracy",
+#               subtitle = "Spanish-Speaking Children: CDS") +
+#   geom_smooth(method = "lm") +
+#   xlab("Clusters/Hour") + ylab("Accuracy")
+
+ggplot(clusterAndDistrubtionMeasuresRT, aes(gini, RT)) +
+  geom_point() +
+   ggtitle(label = "Gini and RT",
+              subtitle = "Spanish-Speaking Children: CDS") +
+  geom_smooth(method = "lm") +
+  xlab("Gini") + ylab("Reaction Time")
+
+ggplot(clusterAndDistrubtionMeasuresRT, aes(clusterPerHr, RT)) +
+  geom_point() +
+   ggtitle(label = "Clusters Per Hour and RT",
+              subtitle = "Spanish-Speaking Children: CDS") +
+  geom_smooth(method = "lm") +
+  xlab("Clusters/Hour") + ylab("Reaction Time")
+
+ggplot(clusterAndDistrubtionMeasuresACC, aes(clean_mean_awc, ACC)) +
+  geom_point() +
+   ggtitle(label = "Clusters Per Hour and RT",
+              subtitle = "Spanish-Speaking Children: CDS") +
+  geom_smooth(method = "lm") +
+  xlab("Clusters/Hour") + ylab("Reaction Time")
+
+#what are the correlations?
+cdi <- rcorr(as.matrix(clusterAndDistrubtionMeasuresCDI))
+acc <- rcorr(as.matrix(clusterAndDistrubtionMeasuresACC))
+rt <- rcorr(as.matrix(clusterAndDistrubtionMeasuresRT))
+
+cdi
+acc
+rt
+```

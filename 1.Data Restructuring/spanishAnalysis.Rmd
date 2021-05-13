@@ -1,0 +1,1944 @@
+---
+title: "Spanish Dataset Analysys"
+author: "Joel Ramirez Jr"
+date: "7/1/2020"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, echo = FALSE, message = FALSE}
+library(tidyverse)
+library(readxl)
+library(ppcor)
+library(gridExtra)
+```
+
+
+
+```{r, echo = FALSE, message = FALSE}
+hourlyOrdered16 <- read_csv("../4.Data/Spanish_Dataset/proportionData/hourlyOrdredAwc16Spanish.csv") 
+hourlyProp16 <- read_csv("../4.Data/Spanish_Dataset/proportionData/hourlyProportionsSpanish.csv")
+segOrdered16 <- read_csv("../4.Data/Spanish_Dataset/proportionData/segOrdredAwc16Spanish.csv") 
+segProp16 <- read_csv("../4.Data/Spanish_Dataset/proportionData/segProportionsSpanish.csv") 
+clusterValue <- read_csv("../4.Data/Spanish_Dataset/clusterValues/clustersAt0.7with0.3SCspanish.csv")
+giniCoefficients <- read_csv("../4.Data/Spanish_Dataset/gini/giniCoefspanish.csv")
+outcomeMeasures <- read_csv("../4.Data/Spanish/outcomes_spanish.csv")
+hourlyOrdered16 <- hourlyOrdered16 %>% 
+  filter( SUBJECT != "424" & SUBJECT < 445 ) %>%
+  filter( SUBJECT != "345" & SUBJECT != "344") %>%
+  filter( SUBJECT != "271" & SUBJECT != "276") %>%
+  filter( SUBJECT != "307" & SUBJECT != "444") %>% 
+  filter( SUBJECT != "202" & SUBJECT != "436") %>% 
+  filter( SUBJECT != "330")
+
+hourlyProp16 <- hourlyProp16 %>% 
+  filter( SUBJECT != "424" & SUBJECT < 445 ) %>%
+  filter( SUBJECT != "345" & SUBJECT != "344") %>%
+  filter( SUBJECT != "271" & SUBJECT != "276") %>%
+  filter( SUBJECT != "307" & SUBJECT != "444") %>% 
+  filter( SUBJECT != "202" & SUBJECT != "436") %>% 
+  filter( SUBJECT != "330")
+
+segOrdered16 <- segOrdered16 %>% 
+  filter( SUBJECT != "424" & SUBJECT < 445 ) %>%
+  filter( SUBJECT != "345" & SUBJECT != "344") %>%
+  filter( SUBJECT != "271" & SUBJECT != "276") %>%
+  filter( SUBJECT != "307" & SUBJECT != "444") %>% 
+  filter( SUBJECT != "202" & SUBJECT != "436") %>% 
+  filter( SUBJECT != "330" & SUBJECT != 440)
+
+segProp16 <- segProp16 %>% 
+  filter( SUBJECT != "424" & SUBJECT < 445 ) %>%
+  filter( SUBJECT != "345" & SUBJECT != "344") %>%
+  filter( SUBJECT != "271" & SUBJECT != "276") %>%
+  filter( SUBJECT != "307" & SUBJECT != "444") %>% 
+  filter( SUBJECT != "202" & SUBJECT != "436") %>% 
+   filter( SUBJECT != "330" & SUBJECT != 440)
+
+
+clusterValue <- clusterValue %>% 
+  filter( SUBJECT != "424" & SUBJECT < 445 ) %>%
+  filter( SUBJECT != "345" & SUBJECT != "344") %>%
+  filter( SUBJECT != "271" & SUBJECT != "276") %>%
+  filter( SUBJECT != "307" & SUBJECT != "444") %>% 
+  filter( SUBJECT != "202" & SUBJECT != "436") %>% 
+  filter( SUBJECT != "330" & SUBJECT != 440)
+
+
+giniCoefficients <- giniCoefficients %>% 
+  filter( SUBJECT != "424" & SUBJECT < 445 ) %>%
+  filter( SUBJECT != "345" & SUBJECT != "344") %>%
+  filter( SUBJECT != "271" & SUBJECT != "276") %>%
+  filter( SUBJECT != "307" & SUBJECT != "444") %>% 
+  filter( SUBJECT != "202" & SUBJECT != "436") %>% 
+   filter( SUBJECT != "330" & SUBJECT != 440)
+
+
+outcomeMeasures <- outcomeMeasures %>% 
+  mutate_if(is.integer, ~replace(., is.na(.), 0)) %>% 
+  mutate_if(is.numeric, ~replace(., is.na(.), 0)) %>% 
+  mutate_if(is.character, ~replace(., is.na(.), "Empty")) %>% 
+  filter(SUBJECT %in% hourlyOrdered16$SUBJECT) %>% 
+  distinct(SUBJECT, CDI, RT, ACC)
+
+
+outcomeMeasures <- as.data.frame(lapply(outcomeMeasures,as.numeric))
+
+#Loading in overall proportional difference.
+subjectPropDrop <- segProp16 %>% 
+  group_by(SUBJECT) %>% 
+  mutate(propDrop = 1-prop) %>% 
+  mutate(avgPropDrop = mean(propDrop), maxPropDrop = max(propDrop), minPropDrop = min(propDrop)) %>% 
+  distinct(avgPropDrop, maxPropDrop, minPropDrop)
+
+spanishSegmentalDistribution <- merge(subjectPropDrop, spanishPerSegment, by = 'SUBJECT')
+
+
+clusterAndDistrubtionMeasures <- merge(clusterValue, spanishPerHour, by = 'SUBJECT')
+
+clusterAndDistrubtionMeasures <- clusterAndDistrubtionMeasures %>% 
+  mutate(clusterPerHr = nclusters/clean_total_hrs, 
+         avgClusterDensityPerHr = avgClusterDensity/clean_total_hrs) 
+
+mean(clusterAndDistrubtionMeasures$clusterPerHr)
+
+
+
+clusterAndDistrubtionMeasures <- merge(clusterAndDistrubtionMeasures, outcomeMeasures, by = 'SUBJECT')
+
+
+clusterAndDistrubtionMeasures <- merge(clusterAndDistrubtionMeasures,giniCoefficients, by = 'SUBJECT')
+
+
+clusterAndDistrubtionMeasures <- merge(clusterAndDistrubtionMeasures,subjectPropDrop, by = 'SUBJECT')
+
+
+summary(clusterAndDistrubtionMeasures$gini)
+sd(clusterAndDistrubtionMeasures$gini)
+
+
+clusterAndDistrubtionMeasuresCDI <- clusterAndDistrubtionMeasures %>% 
+  filter(CDI > -9) %>% 
+  distinct(SUBJECT, gini, clusterPerHr,clean_mean_awc, CDI)
+
+summary(clusterAndDistrubtionMeasuresCDI$CDI)
+sd(clusterAndDistrubtionMeasuresCDI$CDI)
+pcor(clusterAndDistrubtionMeasuresCDI)
+
+clusterAndDistrubtionMeasuresACC <- clusterAndDistrubtionMeasures %>% 
+  filter(ACC != -9 ) %>% 
+  distinct(SUBJECT, gini, clusterPerHr,clean_mean_awc, ACC)
+
+summary(clusterAndDistrubtionMeasuresACC$ACC)
+sd(clusterAndDistrubtionMeasuresACC$ACC)
+pcor(clusterAndDistrubtionMeasuresACC)
+
+clusterAndDistrubtionMeasuresRT <- clusterAndDistrubtionMeasures %>% 
+  filter(RT >= 0 ) %>% 
+   distinct(SUBJECT, gini, clusterPerHr,clean_mean_awc, RT)
+
+
+summary(clusterAndDistrubtionMeasuresRT$RT)
+sd(clusterAndDistrubtionMeasuresRT$RT)
+pcor(clusterAndDistrubtionMeasuresRT)
+
+
+# clusterAndDistrubtionMeasuresCDI <- clusterAndDistrubtionMeasures %>% 
+#   filter(CDI > -9) %>% 
+#   distinct(SUBJECT, nclusters, avgClustersize, minClusterAWC, maxClusterAWC, avgClusterDensity, unclean_total_hrs, clean_total_hrs, unclean_mean_awc, clean_mean_awc,clean_sd_awc, avgClusterDensityPerHr, gini,avgPropDrop, clusterPerHr, CDI)
+# 
+# mean(clusterAndDistrubtionMeasuresCDI$CDI)
+# sd(clusterAndDistrubtionMeasuresCDI$CDI)
+# 
+# clusterAndDistrubtionMeasuresACC <- clusterAndDistrubtionMeasures %>% 
+#   filter(ACC != -9 ) %>% 
+#   distinct(SUBJECT, nclusters, avgClustersize, minClusterAWC, maxClusterAWC, avgClusterDensity, unclean_total_hrs, clean_total_hrs, unclean_mean_awc, clean_mean_awc,clean_sd_awc, avgClusterDensityPerHr, gini,avgPropDrop, clusterPerHr, ACC)
+#   
+# 
+# clusterAndDistrubtionMeasuresRT <- clusterAndDistrubtionMeasures %>% 
+#   filter(RT >= 0 ) %>% 
+#    distinct(SUBJECT, nclusters, avgClustersize, minClusterAWC, maxClusterAWC, avgClusterDensity, unclean_total_hrs, clean_total_hrs, unclean_mean_awc, clean_mean_awc, clean_sd_awc, avgClusterDensityPerHr, gini, avgPropDrop, clusterPerHr, RT)
+
+# hist(spanishPerHour$clean_mean_awc)
+# hist(distributionPerHour16$clean_mean_awc)
+# 
+# subjectExample <- spanishDataset %>% 
+#   filter(SUBJECT == 187)
+# ggplot(subjectExample, aes( x = Time, y = AWC )) +
+#     geom_bar(stat = "identity",position = "dodge") +
+#       theme_gray() +
+#       ggtitle("Subject 11003 Profile of Segment Caregiver Talk")
+# subjectExample <- spanishDataset %>% 
+#   filter(SUBJECT == 196)
+# ggplot(subjectExample, aes( x = Time, y = AWC )) +
+#     geom_bar(stat = "identity",position = "dodge") +
+#       theme_gray() +
+#       ggtitle("Subject 11003 Profile of Segment Caregiver Talk")
+```
+
+```{r}
+mean(clusterAndDistrubtionMeasures$clusterPerHr)
+sd(clusterAndDistrubtionMeasures$clusterPerHr)
+range(clusterAndDistrubtionMeasures$clusterPerHr)
+
+
+mean(giniCoefficients$gini)
+sd(giniCoefficients$gini)
+range(giniCoefficients$gini)
+```
+
+
+
+```{r}
+hourlyOrdered16 <- hourlyOrdered16 %>% 
+  filter( SUBJECT != "424" & SUBJECT < 445 ) %>% 
+  filter( SUBJECT != "345" & SUBJECT != "344") %>% 
+  filter( SUBJECT != "271" & SUBJECT != "276") %>% 
+  filter( SUBJECT != "307" & SUBJECT != "444")
+
+hourlyProp16 <- hourlyProp16 %>% 
+  filter( SUBJECT != "424" & SUBJECT < 445 ) %>% 
+  filter( SUBJECT != "345" & SUBJECT != "344") %>% 
+  filter( SUBJECT != "271" & SUBJECT != "276") %>% 
+  filter( SUBJECT != "307" & SUBJECT != "444")
+
+segOrdered16 <- segOrdered16 %>% 
+  filter( SUBJECT != "424" & SUBJECT < 445 ) %>% 
+  filter( SUBJECT != "345" & SUBJECT != "344") %>% 
+  filter( SUBJECT != "271" & SUBJECT != "276") %>% 
+  filter( SUBJECT != "307" & SUBJECT != "444")
+
+segProp16 <- segProp16 %>% 
+  filter( SUBJECT != "424" & SUBJECT < 445 ) %>% 
+  filter( SUBJECT != "345" & SUBJECT != "344") %>% 
+  filter( SUBJECT != "271" & SUBJECT != "276") %>% 
+  filter( SUBJECT != "307" & SUBJECT != "444")
+
+
+
+clusterValue <- clusterValue %>% 
+  filter( SUBJECT != "424" & SUBJECT < 445 ) %>% 
+  filter( SUBJECT != "345" & SUBJECT != "344") %>% 
+  filter( SUBJECT != "271" & SUBJECT != "276") %>% 
+  filter( SUBJECT != "307" & SUBJECT != "444")
+
+
+giniCoefficients <- giniCoefficients %>% 
+  filter( SUBJECT != "424" & SUBJECT < 445 ) %>% 
+  filter( SUBJECT != "345" & SUBJECT != "344") %>% 
+  filter( SUBJECT != "271" & SUBJECT != "276") %>% 
+  filter( SUBJECT != "307" & SUBJECT != "444")
+
+
+
+outcomeMeasures <- outcomeMeasures %>% 
+  mutate_if(is.integer, ~replace(., is.na(.), 0)) %>% 
+  mutate_if(is.numeric, ~replace(., is.na(.), 0)) %>% 
+  mutate_if(is.character, ~replace(., is.na(.), "Empty")) %>% 
+  filter(SUBJECT %in% spanishDataset$SUBJECT) %>% 
+  distinct(SUBJECT, CDI, RT, ACC)
+
+
+outcomeMeasures <- as.data.frame(lapply(outcomeMeasures,as.numeric))
+
+# outcomeData <- metadata %>% 
+#   rename(SUBJECT = id) %>% 
+#   distinct(SUBJECT, age_L1POST, sex, L1PRE_mom_birth_country, L1PRE_mom_ed, L1PRE_hi, L1PRE_LBQ_span_per, L1PRE_stimq_total, L1PRE_cdi_version, L1PRE_cdi_vocab, L1PRE_cdi_vocabper, L1PRE_acc_3001800, L1PRE_acc_3001800n, L1PRE_gooddrt, L1POST_LBQ_span_per, L1POST_stimq_total, L1POST_cdi_age, CDI, CDIper, ACC, ACCn, RT, L1POST_drtn)
+```
+
+
+
+
+```{r, echo = FALSE, message = FALSE}
+child_dist_per_hour.ordered <- function(df, na.rm = TRUE, ...){
+  
+  # create list of counties in data to loop over 
+  subject_list <- unique(spanishPerHour$SUBJECT)
+  # create for loop to produce ggplot2 graphs 
+  for (i in seq_along(subject_list)) { 
+    
+    # create plot for each subject in df 
+    cur_df <- df %>% 
+      filter(SUBJECT == subject_list[i])
+    
+    plot <- 
+      ggplot(cur_df, aes( x = as.numeric(reorder(hour_bin, clean_total_awc)),
+                          y = as.numeric(clean_total_awc) )) +
+      ylim(0.0, 7000.0) +
+    geom_bar(stat = "identity",position = "dodge") +
+      theme_gray() +
+      ggtitle(paste( "Subject", subject_list[i], 'Hourly Caregiver Talk',
+                    sep=''))
+    # save plots as .png
+    # ggsave(plot, file=paste(results, 
+    #                        'projection_graphs/county_graphs/',
+    #                        county_list[i], ".png", sep=''), scale=2)
+   
+    # save plots as .pdf
+    # ggsave(plot, file=paste(results, 
+    #                        'projection_graphs/county_graphs/',
+    #                        county_list[i], ".pdf", sep=''), scale=2)
+    
+    # print plots to screen
+    print(plot)
+  }
+}
+
+child_dist_per_hour.unordered <- function(df, na.rm = TRUE, ...){
+  
+  # create list of counties in data to loop over 
+  subject_list <- unique(spanishPerHour$SUBJECT)
+  # create for loop to produce ggplot2 graphs 
+  for (i in seq_along(subject_list)) { 
+    
+    # create plot for each subject in df 
+    cur_df <- df %>% 
+      filter(SUBJECT == subject_list[i])
+    
+    plot <- 
+      ggplot(cur_df, aes( x = hour_bin,
+                          y = clean_total_awc)) +
+      ylim(0.0, 7000.0) +
+    geom_bar(stat = "identity",position = "dodge") +
+      theme_gray() +
+      ggtitle(paste( "Subject", subject_list[i], 'Hourly Caregiver Talk',
+                    sep=''))
+    # save plots as .png
+    # ggsave(plot, file=paste(results, 
+    #                        'projection_graphs/county_graphs/',
+    #                        county_list[i], ".png", sep=''), scale=2)
+   
+    # save plots as .pdf
+    # ggsave(plot, file=paste(results, 
+    #                        'projection_graphs/county_graphs/',
+    #                        county_list[i], ".pdf", sep=''), scale=2)
+    
+    # print plots to screen
+    print(plot)
+  }
+}
+
+child_dist_per_seg.ordered <- function(df, na.rm = TRUE, ...){
+  
+  # create list of counties in data to loop over 
+  subject_list <- unique(spanishPerHour$SUBJECT)
+  # create for loop to produce ggplot2 graphs 
+  for (i in seq_along(subject_list)) { 
+    
+    # create plot for each subject in df 
+    
+    cur_df <- df %>% 
+      filter(SUBJECT == subject_list[i])
+    
+    plot <- 
+      ggplot(cur_df, aes( x = as.numeric(reorder(Time, AWC)),
+                          y = as.numeric(AWC) )) +
+    geom_bar(stat = "identity",position = "dodge") +
+      theme_gray() +
+      ggtitle(paste( "Subject ", subject_list[i], ' Per Segment Caregiver Talk',
+                    sep=''))
+    # save plots as .png
+    # ggsave(plot, file=paste(results, 
+    #                        'projection_graphs/county_graphs/',
+    #                        county_list[i], ".png", sep=''), scale=2)
+   
+    # save plots as .pdf
+    # ggsave(plot, file=paste(results, 
+    #                        'projection_graphs/county_graphs/',
+    #                        county_list[i], ".pdf", sep=''), scale=2)
+    
+    # print plots to screen
+    print(plot)
+  }
+}
+
+child_dist_per_seg.unordered <- function(df, na.rm = TRUE, ...){
+  
+  # create list of counties in data to loop over 
+  subject_list <- unique(spanishPerHour$SUBJECT)
+  # create for loop to produce ggplot2 graphs 
+  for (i in seq_along(subject_list)) { 
+    
+    # create plot for each subject in df 
+    cur_df <- df %>% 
+      filter(SUBJECT == subject_list[i])
+    
+    plot <- 
+      ggplot(cur_df, aes( x = as.numeric(Time),
+                          y = as.numeric(AWC) )) +
+      ylim(0.0, 500.0) +
+    geom_bar(stat = "identity",position = "dodge") +
+      theme_gray() +
+      ggtitle(paste( "Subject ", subject_list[i], ' Per Segment Caregiver Talk',
+                    sep=''))
+    # save plots as .png
+    # ggsave(plot, file=paste(results, 
+    #                        'projection_graphs/county_graphs/',
+    #                        county_list[i], ".png", sep=''), scale=2)
+   
+    # save plots as .pdf
+    # ggsave(plot, file=paste(results, 
+    #                        'projection_graphs/county_graphs/',
+    #                        county_list[i], ".pdf", sep=''), scale=2)
+    
+    # print plots to screen
+    print(plot)
+  }
+}
+
+```
+
+# Investigating Daily Talk in the Lives of English- and Spanish-Speaking Children
+
+In this ongoing study we ask ourselves how much child-directed speech is enough to:
+
+- Have a larger vocabulary
+- Have faster language processing speed 
+
+## Things We Do Know
+
+There are many studies that show that caregivers who verbally engage more with their children have children who demonstrate stronger later language skills, including vocabulary growth and language processing efficiency (Hart & Risley, 1985; Cartmill et al., 2013; Weisleder & Fernald, 2013). However, something that has yet to be investigated is how the distribution of child directed speech contibutes to a child's overall language learning. Many studies characterize qualitative differences of children's language environments as differences in average number of words overheard that day. However, we invesitigate that it could be the case that these averages mask certain nuances with which the spread/distribution of child directed speech contributed to a child's language learning.
+
+
+
+
+
+# A Day in the Life of a Child...(on average)
+
+A childs day to day unordered AWC profile would look something like this. Where time is in military time just for the simplicity in plotting. We do see that it is very variable and also has a large window of talk, starting from 8 am to about 7pm. With AWC ranging from 0 words to 667 words within a 5 minute window. 
+
+```{r, echo = FALSE, message = FALSE}  
+subjectExample <- spanishDataset %>% 
+  filter(SUBJECT == 440)
+
+ggplot(subjectExample, aes( x = Time, y = AWC )) +
+    geom_bar(stat = "identity",position = "dodge") +
+      theme_gray() +
+      ggtitle("Subject 440 Profile of Segment Caregiver Talk")
+
+```
+
+
+
+
+
+
+# So, where is talk happening?
+First we have the unclean LENA histogram across all subjects.
+Observations:
+
+- There are two big dense periods throughout the day
+- These periods are in the morning and in the evening, maybe due to parents coming and going from work?
+
+
+```{r, echo = FALSE, message = FALSE}
+ggplot(talkFrequency, aes(x = hour_bin,y = unclean_avg_awc_across_all_subjects)) +
+    geom_bar(stat = "identity",position = "dodge") +
+  theme_gray()
+
+
+# ggplot(talkFrequency, aes(x = hour_bin,y = unclean_avg_ctc_across_all_subjects)) +
+#     geom_bar(stat = "identity",position = "dodge") +
+#   theme_gray()
+# 
+# ggplot(talkFrequency, aes(x = hour_bin,y = unclean_avg_cvc_across_all_subjects)) +
+#     geom_bar(stat = "identity",position = "dodge") +
+#   theme_gray()
+```
+## Cleaning for Naps
+
+Cleaning for naps is basically getting rid of all instances where the child is sleeping.
+This decision was made as for the two samples which we are comparing, the Spanish group turned off the recorders when the child slept or sometimes for some window within the day. So, to make it comparible we get rid of instances when children are sleeping and/or napping. 
+
+# Mean AWC with Standard Deviation of Mean AWC
+
+The first plot is unclean mean awc X unclean standard deviation. These are measures for AWC without cleaning for naps.
+
+The second plot is clean mean awc X clean standard deviation.
+
+```{r, echo = FALSE, message = FALSE}
+ggplot(spanishPerHour, aes(unclean_mean_awc, unclean_sd_awc)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  labs(caption = "Cor: 0.7934902; P= 1.834e-13")
+
+cor.test(spanishPerHour$unclean_mean_awc, spanishPerHour$unclean_sd_awc, method = c("pearson"))
+
+
+ggplot(spanishPerHour, aes(clean_mean_awc, clean_sd_awc))+
+  geom_point() +
+   geom_smooth(method = "lm")+
+  labs(caption = "Cor: 0.8113809  ; P= 1.952e-14")
+
+cor.test(spanishPerHour$clean_mean_awc, spanishPerHour$clean_sd_awc, method = c("pearson"))
+
+```
+
+
+
+
+
+```{r, echo = FALSE, message = FALSE}
+# # Plotting mean CTC with Std Dev CTC
+# The first plot is unclean mean ctc X unclean ctc standard deviation. This are measures for ctc without cleaning for naps.
+# The second plot is clean mean ctc X clean ctc standard deviation.
+# #Then, we will plot each, but first we will need to reshape the data frame into a long format
+# ggplot(spanishPerSegment, aes(unclean_mean_ctc, unclean_sd_ctc))+
+#   geom_point()+
+#    geom_smooth(method = "lm")
+# 
+# ggplot(spanishPerSegment, aes(clean_mean_ctc, clean_sd_ctc))+
+#   geom_point()+
+#    geom_smooth(method = "lm")
+```
+
+
+```{r, echo = FALSE, message = FALSE}
+## Plotting mean CVC with Std Dev CVC
+# 
+# The first plot is unclean mean CVC X unclean CVC standard deviation. This are measures for CVC without cleaning for naps.
+# 
+# The second plot is clean mean CVC X clean CVC standard deviation.
+# #Then, we will plot each, but first we will need to reshape the data frame into a long format
+# ggplot(spanishPerSegment, aes(unclean_mean_cvc, unclean_sd_cvc))+
+#   geom_point()+
+#    geom_smooth(method = "lm")
+# 
+# ggplot(spanishPerSegment, aes(clean_mean_cvc, clean_sd_cvc))+
+#   geom_point()+
+#    geom_smooth(method = "lm")
+```
+
+
+
+```{r, echo = FALSE, message = FALSE}
+#Then, we will plot each, but first we will need to reshape the data frame into a long format
+# ggplot(spanishPerHour, aes(unclean_mean_awc, unclean_sd_awc))+
+#   geom_point()+
+#    geom_smooth(method = "lm")
+# 
+# ggplot(spanishPerHour, aes(clean_mean_awc, clean_sd_awc))+
+#   geom_point()+
+#    geom_smooth(method = "lm")
+```
+
+```{r, echo = FALSE, message = FALSE }
+# #Then, we will plot each, but first we will need to reshape the data frame into a long format
+# ggplot(spanishPerHour, aes(unclean_mean_ctc, unclean_sd_ctc))+
+#   geom_point()
+# 
+# ggplot(spanishPerHour, aes(clean_mean_ctc, clean_sd_ctc))+
+#   geom_point()
+```
+
+```{r, echo = FALSE, message = FALSE }
+#Then, we will plot each, but first we will need to reshape the data frame into a long format
+# ggplot(spanishPerHour, aes(unclean_mean_cvc, unclean_sd_cvc))+
+#   geom_point()
+# 
+# ggplot(spanishPerHour, aes(clean_mean_cvc, clean_sd_cvc))+
+#   geom_point()'
+```
+
+
+
+```{r, echo = FALSE, message = FALSE}
+# Next we have the clean LENA histograms across all subjects. We have AWC, CTC, and CVC. 
+# Observations:
+# 
+# - Similarly, here are two big dense periods throughout the day
+# - These periods are in the morning and in the evening, maybe due to parents coming and going from work.
+# ggplot(talkFrequency, aes(x = hour_bin,y = clean_avg_awc_across_all_subjects)) +
+#     geom_bar(stat = "identity",position = "dodge") +
+#   theme_gray()
+# 
+# ggplot(talkFrequency, aes(x = hour_bin,y = clean_avg_ctc_across_all_subjects)) +
+#     geom_bar(stat = "identity",position = "dodge") +
+#   theme_gray()
+# 
+# ggplot(talkFrequency, aes(x = hour_bin,y = clean_avg_cvc_across_all_subjects)) +
+#     geom_bar(stat = "identity",position = "dodge") +
+#   theme_gray()
+```
+
+
+
+
+```{r, echo = FALSE, message = FALSE}
+# child_dist_per_hour.ordered(distributionSumation16)
+## what is the difference between top hour and bottom hour? and what is the mean/proportion maximal difference between hours. 
+
+
+
+```
+
+```{r, echo = FALSE, message = FALSE}
+# child_dist_per_hour.unordered(distributionSumation16)
+## what is the difference between top hour and bottom hour? and what is the mean/proportion maximal difference between hours. 
+```
+
+
+```{r, echo = FALSE, message = FALSE}
+# child_dist_per_seg.ordered(spanishDataset)
+
+## fix the squigily graph
+
+# is there a relationship between how steep your curve is and the avereage,
+# Do steeper people have a higher average overall?
+# You have people who are bursty, if you are bursty, do you have a higher average overall or can we decouple burstyness? 
+# Are there pockets of time while the rest is not as intense.
+# Can you be low overall but still be bursty?
+# Average, steepness, and burstyness. 
+
+# child_dist_per_seg.unordered(spanishDataset)
+
+```
+
+```{r, echo = FALSE, message = FALSE}
+# child_dist_per_seg.unordered(spanishDataset)
+
+## fix the squigily graph
+
+# is there a relationship between how steep your curve is and the avereage,
+# Do steeper people have a higher average overall?
+# You have people who are bursty, if you are bursty, do you have a higher average overall or can we decouple burstyness? 
+# Are there pockets of time while the rest is not as intense.
+# Can you be low overall but still be bursty?
+
+
+# Average, steepness, and burstyness. 
+
+```
+
+# Proportional Drop
+Proportional drop was a measure we came up with to measure variance in the child's moment-to-moment language environment.
+In a list of AWCs, orderd from smalled to largest where $AWC_i \geq AWC_{i=1}$, for a single child, proportional drop for two single observations can be seen as $P\Delta = 1 - AWC_{i-1}/AWC_i$ where $AWC_{i-1}/AWC_i$ is the percentage of AWC from one drop to the other. And, so to see the proportional drop we take $1 - AWC_{i-1}/AWC_i$ to get the proportional difference between the $i^{th}$ and $i^{th}-1$. 
+
+We used two measures:
+
+- average proportional drop across the day
+- max drop throughout the day
+
+Observations: 
+  We saw that every child had at least two contiguous segments with the same AWC count. Thus, all children had a mininum drop of 0.
+  
+
+
+Here we see the histogram proportional drop across the entire day as well as a summary of its statistics.
+
+```{r, echo = FALSE, message = FALSE}
+hist(subjectPropDrop$avgPropDrop)
+summary(subjectPropDrop$avgPropDrop)
+```
+
+Here are side by side graphs of average proportional drop against clean mean AWC and standard deviation AWC.
+
+```{r, echo = FALSE, message = FALSE}
+pdXcma <- ggplot(spanishSegmentalDistribution, aes(x = avgPropDrop, y = clean_mean_awc))+
+  geom_point() + 
+  geom_smooth(method = "lm")
+
+pdXcsda <- ggplot(spanishSegmentalDistribution, aes(x = avgPropDrop, y = clean_sd_awc))+
+  geom_point() + 
+  geom_smooth(method = "lm")
+
+grid.arrange(pdXcma, pdXcsda, ncol=2)
+
+```
+
+Here are side by side graphs of max proportional drop against clean mean AWC and standard deviation AWC.
+We see that they are not correlated at all and so at this point we decided to leave the measure alone.
+
+```{r, echo = FALSE, message = FALSE}
+mxpXcma <- ggplot(spanishSegmentalDistribution, aes(x = maxPropDrop, y = clean_mean_awc))+
+  geom_point() + 
+  geom_smooth(method = "lm")
+
+mxpXcsda <- ggplot(spanishSegmentalDistribution, aes(x = maxPropDrop, y = clean_sd_awc))+
+  geom_point() + 
+  geom_smooth(method = "lm")
+
+
+grid.arrange(mxpXcma, mxpXcsda, ncol=2)
+
+```
+
+
+
+```{r, echo = FALSE, message = FALSE}
+
+#some people can be steepy and low and some people can be steepy and high
+#some people can be grad and low and some people can be grad and high
+#What does all day AWC mean?? High awc means ppl talk all the time??? nah, it's just an average accross the day
+#people are variable from moment to moment and talk about the shape of the overall dist, with bursty and gradual people
+#some people have a biggere difference on average between each 5 minute segment
+#DREW ABNEY (LITERATURE ON BURSTYNESS)
+#START A TIMELINE FOR DEADLINES
+#SRCD BI ANNUAL CONFERENCE ABOUT FAMILY MATTERS 
+#start back, from the start with AWC and what it means.
+#then get to the peakyness and awc 
+#go back to the casillas paper, with how can people learn from nothing? 
+#the nothing is defined from very low talk (on average)
+#are there peaks of intense language?
+
+#where we are at is not an easy place to be at, so use some graphics and make it easier to understand!cisc
+#Then, we will plot each, but first we will need to reshape the data frame into a long format
+
+# 
+# ggplot(spanishPerSegment, aes(unclean_mean_ctc, unclean_sd_ctc))+
+#   geom_point()
+# 
+# ggplot(spanishPerSegment, aes(clean_mean_ctc, clean_sd_ctc))+
+#   geom_point()
+# 
+# ggplot(spanishPerSegment, aes(x = reorder(SUBJECT, clean_mean_ctc),y = clean_mean_ctc)) +
+#     geom_bar(stat = "identity",position = "dodge") +
+#   geom_errorbar(width=.1, aes(ymin=clean_mean_ctc-clean_sd_ctc, ymax=clean_mean_ctc+clean_sd_ctc)) +
+#   theme_gray()
+# 
+# english <- spanishDataset %>% 
+#   replace_na(list(Exclude = "keep")) %>% 
+#   replace_na(list(DNL = "0")) %>% 
+#   replace_na(list(Sleep = "0"))
+# 
+# date_seq <- english %>% 
+#   group_by(SUBJECT, Date) %>% 2
+#   distinct(Date) %>% 
+#   group_by(SUBJECT) %>% 
+#   arrange(Date) %>% 
+#   mutate(date_seq = seq_len(n()))
+# 
+# english2 <- english %>% 
+#   full_join(date_seq, by = c("SUBJECT", "Date"))
+# 
+# 
+# hours_rec_uncleaned_full_recording <- english2 %>% 
+#   group_by(SUBJECT) %>% 
+#   mutate(hours_rec_uncleaned_full_recording = sum(Duration)/3600) %>% 
+#   distinct(SUBJECT, hours_rec_uncleaned_full_recording)
+# 
+# ggplot(hours_rec_uncleaned_full_recording, aes(hours_rec_uncleaned_full_recording)) + 
+#   geom_histogram() 
+# 
+# english <- english %>% 
+#  filter(SUBJECT < 911000)
+# 
+# ggplot(english, aes(Time, SUBJECT)) +
+#   geom_point()
+```
+
+# Clustering Measures
+
+As we saw before, the language landscape of a child is very variable throughout the day. So how to we simplify this? 
+
+```{r, echo = FALSE, message = FALSE}  
+subjectExample <- spanishDataset %>% 
+  filter(SUBJECT == 426)
+
+ggplot(subjectExample, aes( x = Time, y = AWC )) +
+    geom_bar(stat = "identity",position = "dodge") +
+      theme_gray() +
+      ggtitle("Subject 426 Profile of Segment Caregiver Talk")
+```
+
+
+To find periods of dense talk, we identified the highest 30% of AWC segments for each family, and then applied a k-means clustering algorithm to identify one or more consecutive 5 minute segments that were similar in AWC (i.e., clusters of talk).
+
+```{r, echo = FALSE, message = FALSE}
+subjectExample <- spanishDataset %>% 
+  filter(SUBJECT == 426) %>% 
+  filter(AWC >= quantile(spanishDataset$AWC, probs = c(.7)))
+
+ggplot(subjectExample, aes( x = Time, y = AWC )) +
+    geom_bar(stat = "identity",position = "dodge") +
+      theme_gray() +
+      ggtitle("Subject 11003 70th Percentile Profile of Segment Caregiver Talk")
+
+```
+
+Thus, it simplifies the work we have to do by only looking at the top 30th percentile of AWCs for each child and also helps us better see the amounts of peaks a child has throughout the day. So when we run a kmeans custering algorithm, we run it on these top 30th percentile awcs for each child respectively.
+
+# K-Means Clustering
+k-means clustering is a method of vector quantization, originally from signal processing, that aims to partition n observations into k clusters in which each observation belongs to the cluster with the nearest mean (cluster centers or cluster centroid), serving as a prototype of the cluster. 
+
+Given a set of observations $(x_1, x_2, ..., x_n)$, where each observation is a d-dimensional real vector, k-means clustering aims to partition the $n$ observations into $k (\leq n)$ sets $S = {S_1, S_2, ..., S_k}$ so as to minimize the within-cluster sum of squares (WCSS) (i.e. variance). Formally, the objective is to find:
+
+${\displaystyle {\underset {\mathbf {S} }{\operatorname {arg\,min} }}\sum _{i=1}^{k}\sum _{\mathbf {x} \in S_{i}}\left\|\mathbf {x} -{\boldsymbol {\mu }}_{i}\right\|^{2}={\underset {\mathbf {S} }{\operatorname {arg\,min} }}\sum _{i=1}^{k}|S_{i}|\operatorname {Var} S_{i}}$
+
+Using the K-means clustering approach, where a cluster can be 1 point alone, we found these statistics.
+
+- Range(0, 35) in the number of clusters found for each child. We are currently investigating why this number is so high.
+- Mean number of of clusters is approximately 13.9.
+- Average cluster Size (i.e. duration) was 2.07 (Less Constrained 1.257422). This means that each cluster was approximately 10 minutes long.
+
+To take into account differences in recording length, which had a range of 5 to 12 full hours (clean), we made the number of clusters a rate per hour. Current statistics are as follows:
+
+- Mean: 1.413 clusters per hour.  (Less Constrained 2.165808)
+- Median: 1.352 clusters per hour
+
+
+Clusters per hour turned out to correlate significantly with Mean AWC and Standard Deviation of Average AWC. 
+
+
+```{r, echo = FALSE, message = FALSE}
+clusterPerHourXMeanAWC <- ggplot(clusterAndDistrubtionMeasures, aes(clusterPerHr, clean_mean_awc))+
+  geom_point() +
+  geom_smooth(method = "lm")+
+  labs(caption = "Cor: 0.1850137 ; P= 0.09822")
+
+cor.test(clusterAndDistrubtionMeasures$clusterPerHr, clusterAndDistrubtionMeasures$clean_mean_awc, method = c("pearson"))
+
+clusterPerHourXSTDAWC <- ggplot(clusterAndDistrubtionMeasures, aes(clusterPerHr, clean_sd_awc))+
+  geom_point() +
+  geom_smooth(method = "lm")+
+  labs(caption = "Cor: -0.06834326 ; P= 0.5469")
+cor.test(clusterAndDistrubtionMeasures$clusterPerHr, clusterAndDistrubtionMeasures$clean_sd_awc, method = c("pearson"))
+
+grid.arrange(clusterPerHourXMeanAWC, clusterPerHourXSTDAWC, ncol=2)
+```
+
+
+```{r, echo = FALSE, message = FALSE}
+
+
+
+nClustersXMeanAWC <- ggplot(clusterAndDistrubtionMeasures, aes(nclusters, clean_mean_awc))+
+  geom_point() +
+  geom_smooth(method = "lm")+
+  labs(caption = "Cor: -0.1278388 ; P=0.2554")
+
+cor.test(clusterAndDistrubtionMeasures$nclusters, clusterAndDistrubtionMeasures$clean_mean_awc, method = c("pearson"))
+
+nClustersXSTDAWC <- ggplot(clusterAndDistrubtionMeasures, aes(nclusters, clean_sd_awc))+
+  geom_point() +
+  geom_smooth(method = "lm")+
+  labs(caption = "Cor: 0.1414994; P= 0.2106")
+cor.test(clusterAndDistrubtionMeasures$nclusters, clusterAndDistrubtionMeasures$clean_sd_awc, method = c("pearson"))
+
+grid.arrange(nClustersXMeanAWC, nClustersXSTDAWC, ncol=2)
+```
+
+
+```{r, echo = FALSE, message = FALSE}
+
+
+
+minClusterSizeXMeanAWC <- ggplot(clusterAndDistrubtionMeasures, aes(minClusterAWC, clean_mean_awc))+
+  geom_point() +
+  geom_smooth(method = "lm")+
+  labs(caption = "Cor: 0.6112874 ; P= 1.351e-09")
+
+cor.test(clusterAndDistrubtionMeasures$minClusterAWC, clusterAndDistrubtionMeasures$clean_mean_awc, method = c("pearson"))
+
+minClusterSizeXSTDAWC <- ggplot(clusterAndDistrubtionMeasures, aes(minClusterAWC, clean_sd_awc))+
+  geom_point() +
+  geom_smooth(method = "lm")+
+  labs(caption = "Cor: 0.4361404; P= 5.255e-05")
+cor.test(clusterAndDistrubtionMeasures$minClusterAWC, clusterAndDistrubtionMeasures$clean_sd_awc, method = c("pearson"))
+
+grid.arrange(minClusterSizeXMeanAWC, minClusterSizeXSTDAWC, ncol=2)
+```
+
+```{r, echo = FALSE, message = FALSE}
+
+
+
+maxClusterAWCXMeanAWC <- ggplot(clusterAndDistrubtionMeasures, aes(maxClusterAWC, clean_mean_awc))+
+  geom_point() +
+  geom_smooth(method = "lm")+
+  labs(caption = "Cor: 0.7976292 ; P< 2.2e-16")
+
+cor.test(clusterAndDistrubtionMeasures$maxClusterAWC, clusterAndDistrubtionMeasures$clean_mean_awc, method = c("pearson"))
+
+maxClusterAWCXSTDAWC <- ggplot(clusterAndDistrubtionMeasures, aes(maxClusterAWC, clean_sd_awc))+
+  geom_point() +
+  geom_smooth(method = "lm")+
+  labs(caption = "Cor: 0.6816475; P= 3.404e-12")
+cor.test(clusterAndDistrubtionMeasures$maxClusterAWC, clusterAndDistrubtionMeasures$clean_sd_awc, method = c("pearson"))
+
+grid.arrange(maxClusterAWCXMeanAWC, maxClusterAWCXSTDAWC, ncol=2)
+```
+
+
+
+```{r, echo = FALSE, message = FALSE}
+
+
+
+avgClusterDensityXMeanAWC <- ggplot(clusterAndDistrubtionMeasures, aes(avgClusterDensity, clean_mean_awc))+
+  geom_point() +
+  geom_smooth(method = "lm")+
+  labs(caption = "Cor: 0.7894309 ; P < 2.2e-16")
+
+cor.test(clusterAndDistrubtionMeasures$avgClusterDensity, clusterAndDistrubtionMeasures$clean_mean_awc, method = c("pearson"))
+
+avgClusterDensityXSTDAWC <- ggplot(clusterAndDistrubtionMeasures, aes(avgClusterDensity, clean_sd_awc))+
+  geom_point() +
+  geom_smooth(method = "lm")+
+  labs(caption = "Cor: 0.5995816; P= 4.186e-09")
+cor.test(clusterAndDistrubtionMeasures$avgClusterDensity, clusterAndDistrubtionMeasures$clean_sd_awc, method = c("pearson"))
+
+grid.arrange(avgClusterDensityXMeanAWC, avgClusterDensityXSTDAWC, ncol=2)
+```
+
+
+Average cluster size was found not to correlate with AWC or number of clusters as we see below.
+
+```{r, echo = FALSE, message = FALSE}
+
+a <- ggplot(clusterAndDistrubtionMeasures, aes(avgClustersize , clean_mean_awc))+
+  geom_point() +
+  geom_smooth(method = "lm")
+
+# cor.test(clusterAndDistrubtionMeasures$avgclustersize, clusterAndDistrubtionMeasures$clean_mean_awc, method = c("pearson"))
+
+
+
+b <- ggplot(clusterAndDistrubtionMeasures, aes(avgClustersize, nclusters))+
+  geom_point() +
+  geom_smooth(method = "lm(formula = y ~ log(x)")
+
+# cor.test(clusterAndDistrubtionMeasures$avgclustersize, clusterAndDistrubtionMeasures$clean_sd_awc, method = c("pearson"))
+
+
+grid.arrange(b, ncol=1)
+```
+
+
+<!-- ## Where Each Cluster Must Have at Least Two Points.  -->
+
+<!-- We discussed whether allowing clusters to have at least 1 one point was not capturing the dense moments of talk we were looking for. So, as a comparison, we re-ran the clustering algorithm to only allow clusters of size 2 or greater and this is what we found.  -->
+
+<!-- Using the K-means clustering approach, where a cluster must be at least 2 points, we found these statistics. -->
+
+<!-- - Range, (0, 15) in the number of clusters found for each child.  -->
+<!-- - Mean number of clusters is approximately 5.267 for each child. -->
+<!-- - Average cluster Size (i.e. duration) was 6.02. This means that each cluster was approximately 30 minutes long. -->
+
+<!-- To take into account differences in recording length, which had a range of 5 to 12 full hours (clean), we made the number of clusters a rate per hour. Current statistics are as follows: -->
+
+<!-- - Mean: 0.548 clusters per hour. -->
+<!-- - Median: 0.576 clusters per hour -->
+
+
+<!-- ```{r, echo = FALSE, message = FALSE} -->
+
+
+<!-- clusterPerHourXMeanAWC <- ggplot(clusterAndDistrubtionMeasures, aes(clusterPerHrMin2, clean_mean_awc))+ -->
+<!--   geom_point() + -->
+<!--   geom_smooth(method = "lm")+ -->
+<!--   labs(caption = "Cor: 0.574; P<.001") -->
+
+<!-- #cor.test(clusterAndDistrubtionMeasures$clusterPerHrMin2, clusterAndDistrubtionMeasures$clean_mean_awc, method = c("pearson")) -->
+
+<!-- clusterPerHourXSTDAWC <- ggplot(clusterAndDistrubtionMeasures, aes(clusterPerHrMin2, clean_sd_awc))+ -->
+<!--   geom_point() + -->
+<!--   geom_smooth(method = "lm")+ -->
+<!--   labs(caption = "Cor: 0.433; P<.001") -->
+
+<!-- #cor.test(clusterAndDistrubtionMeasures$clusterPerHrMin2, clusterAndDistrubtionMeasures$clean_sd_awc, method = c("pearson")) -->
+
+<!-- grid.arrange(clusterPerHourXMeanAWC, clusterPerHourXSTDAWC, ncol=2) -->
+<!-- ``` -->
+
+
+<!-- Now, we see that for clusters for minimum size 2, average cluster size is related to mean hourly awc.  -->
+
+<!-- ```{r, echo = FALSE, message = FALSE} -->
+
+
+
+<!-- c <- ggplot(clusterAndDistrubtionMeasures, aes(avgClusterDensity, clean_mean_awc))+ -->
+<!--   geom_point() + -->
+<!--   geom_smooth(method = "lm") +  -->
+<!--   labs(caption = "Cor: 0.466; P<.001") -->
+
+<!-- cor.test(clusterAndDistrubtionMeasures$avgClusterDensity, clusterAndDistrubtionMeasures$clean_mean_awc, method = c("pearson")) -->
+
+
+<!-- d <- ggplot(clusterAndDistrubtionMeasures, aes(avgClusterDensity, clean_sd_awc))+ -->
+<!--   geom_point() + -->
+<!--   geom_smooth(method = "lm")+ -->
+<!--   labs(caption = "Cor: 0.358; P<.01") -->
+
+<!-- cor.test(clusterAndDistrubtionMeasures$avgClusterDensity, clusterAndDistrubtionMeasures$clean_sd_awc, method = c("pearson")) -->
+
+
+<!-- grid.arrange(c, d, ncol=2) -->
+<!-- ``` -->
+
+<!-- # Looking at the AWC Density for Clusters!  -->
+
+<!-- We have previously looked at duration of clusters and also number of clusters per hour. Now allow us to see how the density or size of the clusters with respect with their AWC relates to other measures! -->
+
+<!-- ```{r, echo = FALSE, message = FALSE} -->
+
+<!-- c <- ggplot(clusterAndDistrubtionMeasures, aes(minClusterAWC , clean_mean_awc))+ -->
+<!--   geom_point() + -->
+<!--   geom_smooth(method = "lm") +  -->
+<!--   labs(caption = "Cor: 0.466; P<.001") -->
+
+<!-- # cor.test(clusterAndDistrubtionMeasures$avgclustersize2Min, clusterAndDistrubtionMeasures$clean_mean_awc, method = c("pearson")) -->
+
+
+<!-- d <- ggplot(clusterAndDistrubtionMeasures, aes(minClusterAWC, clean_sd_awc))+ -->
+<!--   geom_point() + -->
+<!--   geom_smooth(method = "lm")+ -->
+<!--   labs(caption = "Cor: 0.358; P<.01") -->
+
+
+<!-- # cor.test(clusterAndDistrubtionMeasures$avgclustersize2Min, clusterAndDistrubtionMeasures$clean_sd_awc, method = c("pearson")) -->
+
+
+<!-- <!-- grid.arrange(c, d, ncol=2) --> -->
+<!-- <!-- ``` --> -->
+<!-- ```{r, echo = FALSE, message = FALSE} -->
+
+<!-- c <- ggplot(clusterAndDistrubtionMeasures, aes(maxClusterAWC , clean_mean_awc))+ -->
+<!--   geom_point() + -->
+<!--   geom_smooth(method = "lm") +  -->
+<!--   labs(caption = "Cor: 0.466; P<.001") -->
+
+<!-- # cor.test(clusterAndDistrubtionMeasures$avgclustersize2Min, clusterAndDistrubtionMeasures$clean_mean_awc, method = c("pearson")) -->
+
+
+<!-- d <- ggplot(clusterAndDistrubtionMeasures, aes(maxClusterAWC, clean_sd_awc))+ -->
+<!--   geom_point() + -->
+<!--   geom_smooth(method = "lm")+ -->
+<!--   labs(caption = "Cor: 0.358; P<.01") -->
+
+
+<!-- # cor.test(clusterAndDistrubtionMeasures$avgclustersize2Min, clusterAndDistrubtionMeasures$clean_sd_awc, method = c("pearson")) -->
+
+
+<!-- grid.arrange(c, d, ncol=2) -->
+<!-- ``` -->
+
+# Introducing the Gini Coefficient
+
+The Gini Coefficient is a measure of inequality in a frequency distribution (mostly used for income). The value can range from 0, the most equal, to 1 the most unequal. For example a gini coefficient of 1 for a child would represent a child who hears all the child directed speech they will hear in a given day, durring one of the 5-minute periods. 
+
+# Relating the Gini Coefficient to AWC 
+
+We see that the Gini Coefficient is correlated with daily AWC. This means that as the input across the day becomes more equal for a given child, we also expect them to have heard less speech during the day per hour. This agrees with what we said previously, as the more variable talk is across the day, the more words we expect the child to hear across an entire day.
+
+```{r, echo = FALSE, message = FALSE}
+
+
+
+GiniXMeanAWC <- ggplot(clusterAndDistrubtionMeasures, aes(gini, clean_mean_awc))+
+  geom_point() +
+  geom_smooth(method = "lm")+
+  labs(caption = "Cor: 0.5710442; P= 2.596e-08")
+
+cor.test(clusterAndDistrubtionMeasures$gini, clusterAndDistrubtionMeasures$clean_mean_awc, method = c("pearson"))
+
+GiniXSTDAWC <- ggplot(clusterAndDistrubtionMeasures, aes(gini, clean_sd_awc))+
+  geom_point() +
+  geom_smooth(method = "lm")+
+  labs(caption = "Cor: -0.1773408; P = 0.1156")
+
+cor.test(clusterAndDistrubtionMeasures$gini, clusterAndDistrubtionMeasures$clean_sd_awc, method = c("pearson"))
+
+# cor.test(clusterAndDistrubtionMeasures$gini, clusterAndDistrubtionMeasures$clean_sd_awc, method = c("pearson"))
+
+grid.arrange(GiniXMeanAWC, GiniXSTDAWC, ncol=2)
+```
+
+
+
+
+
+
+
+Next, we want to look at how these measures predict to later language outcomes. 
+
+# Clusters Against Vocabulary Size, Reaction Time, and Accuracy 3 Months Later.
+
+Children’s vocabulary size was assessed using the MacArthur-Bates Communicative Development Inventories (CDI) in English (Fenson et al. 2007) or Spanish (Jackson-Maldonado et al., 2003). This is a parent survey asking how many common words the child knows at 15 months. Children’s language processing efficiency was assessed in the Looking-While-Listening task (Fernald et al., 2006). Here, children are present with two pictures, a target and a distraction. Both are on opposite sides of a monitor. A voice says, 'Can you see the ____'. And so, the elapsed time it takes the child to look at the target picture from the distraction is the Reaction Time (RT) and Accuracy reflects the proportion of time fixating on the named picture. 
+
+
+## First, we predict to all outcome measures from Clusters per Hour
+
+### Predicting to ACC
+
+
+### Clusters of minimum size 1
+
+```{r, echo = FALSE, message = FALSE}
+# ggplot(clusterAndDistrubtionMeasures, aes(clusterPerHr, clean_mean_awc))+
+#   geom_point() +
+#   geom_smooth(method = "lm")
+# 
+# ggplot(clusterAndDistrubtionMeasures, aes(clusterPerHr, clean_sd_awc))+
+#   geom_point() +
+#    geom_smooth(method = "lm")
+
+
+library("Hmisc")
+
+clusterAndDistrubtionMeasuresCDI <- clusterAndDistrubtionMeasures %>% 
+  filter(CDI > -9) %>% 
+  distinct(SUBJECT, nclusters, avgClustersize, minClusterAWC, maxClusterAWC, avgClusterDensity, unclean_total_hrs, clean_total_hrs, unclean_mean_awc, clean_mean_awc,clean_sd_awc, avgClusterDensityPerHr, gini,avgPropDrop, clusterPerHr, CDI)
+
+
+
+clusterAndDistrubtionMeasuresACC <- clusterAndDistrubtionMeasures %>% 
+  filter(ACC != -9 ) %>% 
+  distinct(SUBJECT, nclusters, avgClustersize, minClusterAWC, maxClusterAWC, avgClusterDensity, unclean_total_hrs, clean_total_hrs, unclean_mean_awc, clean_mean_awc,clean_sd_awc, avgClusterDensityPerHr, gini,avgPropDrop, clusterPerHr, ACC)
+  
+
+clusterAndDistrubtionMeasuresRT <- clusterAndDistrubtionMeasures %>% 
+  filter(RT >= 0 ) %>% 
+   distinct(SUBJECT, nclusters, avgClustersize, minClusterAWC, maxClusterAWC, avgClusterDensity, unclean_total_hrs, clean_total_hrs, unclean_mean_awc, clean_mean_awc, clean_sd_awc, avgClusterDensityPerHr, gini, avgPropDrop, clusterPerHr, RT)
+
+
+# mean(clusterAndDistrubtionMeasuresCDI$CDI)
+# sd(clusterAndDistrubtionMeasuresCDI$CDI)
+# range(clusterAndDistrubtionMeasuresCDI$CDI)
+
+#   
+# write_csv(clusterAndDistrubtionMeasuresCDI, 'CDI_Spanish.csv')
+# 
+# write_csv(clusterAndDistrubtionMeasuresACC, 'ACC_Spanish.csv')
+# 
+# write_csv(clusterAndDistrubtionMeasuresRT, 'RT_Spanish.csv')
+# theme(plot.title = element_text(hjust = 0.5))
+
+ggplot(clusterAndDistrubtionMeasuresCDI, aes(gini, CDI)) +
+  geom_point() +
+   ggtitle(label = "Gini and CDI",
+              subtitle = "Spanish-Speaking Children") +
+  geom_smooth(method = "lm")+
+  xlab("Gini") + ylab("CDI")
+
+ggplot(clusterAndDistrubtionMeasuresCDI, aes(clusterPerHr, CDI)) +
+  geom_point() +
+   ggtitle(label = "Clusters Per Hour and CDI",
+              subtitle = "Spanish-Speaking Children") +
+  geom_smooth(method = "lm")+
+  xlab("Clusters/Hour") + ylab("CDI")
+
+# ggplot(clusterAndDistrubtionMeasuresACC, aes(gini, ACC)) +
+#   geom_point() +
+#    ggtitle(label = "Gini and Accuracy",
+#               subtitle = "Spanish-Speaking Children") +
+#   geom_smooth(method = "lm") +
+#   xlab("Gini") + ylab("Accuracy")
+# 
+# ggplot(clusterAndDistrubtionMeasuresACC, aes(clusterPerHr, ACC)) +
+#   geom_point() +
+#    ggtitle(label = "Clusters Per Hour and Accuracy",
+#               subtitle = "Spanish-Speaking Children") +
+#   geom_smooth(method = "lm") +
+#   xlab("Clusters/Hour") + ylab("Accuracy")
+
+ggplot(clusterAndDistrubtionMeasuresRT, aes(gini, RT)) +
+  geom_point() +
+   ggtitle(label = "Gini and RT",
+              subtitle = "Spanish-Speaking Children") +
+  geom_smooth(method = "lm") +
+  xlab("Gini") + ylab("Reaction Time")
+
+ggplot(clusterAndDistrubtionMeasuresRT, aes(clusterPerHr, RT)) +
+  geom_point() +
+   ggtitle(label = "Clusters Per Hour and RT",
+              subtitle = "Spanish-Speaking Children") +
+  geom_smooth(method = "lm") +
+  xlab("Clusters/Hour") + ylab("Reaction Time")
+
+```
+### Cluster Size (Duration)
+
+```{r, echo = FALSE, message = FALSE}
+# ggplot(clusterAndDistrubtionMeasures, aes(clusterPerHr, clean_mean_awc))+
+#   geom_point() +
+#   geom_smooth(method = "lm")
+# 
+# ggplot(clusterAndDistrubtionMeasures, aes(clusterPerHr, clean_sd_awc))+
+#   geom_point() +
+#    geom_smooth(method = "lm")
+
+clusterXCDI <- ggplot(clusterAndDistrubtionMeasuresCDI, aes(avgClustersize, CDI))+
+  geom_point() +
+  geom_smooth(method = "lm") +
+   ggtitle("Vocabulary") +
+  xlab("Clusters/Hour ~ 16 Months") + ylab("CDI at 18 Months")
+
+
+clusterXACC <- ggplot(clusterAndDistrubtionMeasuresACC , aes(avgClustersize, ACC))+
+  geom_point() +
+   geom_smooth(method = "lm")+
+  ggtitle("Accuracy") +
+  xlab("Clusters/Hour ~ 16 Months") + ylab("Acurracy at 18 Months")
+
+clusterXRT <- ggplot(clusterAndDistrubtionMeasuresRT, aes(avgClustersize, RT))+
+  geom_point() +
+   geom_smooth(method = "lm")+
+  ggtitle("Reaction Time") +
+  xlab("Clusters/Hour ~ 16 Months") + ylab("Reaction Time at 18 Months")
+
+
+grid.arrange(clusterXCDI,clusterXACC, clusterXRT, ncol=3)
+```
+
+
+### Max Cluster AWC 
+
+```{r, echo = FALSE, message = FALSE}
+# ggplot(clusterAndDistrubtionMeasures, aes(clusterPerHr, clean_mean_awc))+
+#   geom_point() +
+#   geom_smooth(method = "lm")
+# 
+# ggplot(clusterAndDistrubtionMeasures, aes(clusterPerHr, clean_sd_awc))+
+#   geom_point() +
+#    geom_smooth(method = "lm")
+
+clusterXCDI <- ggplot(clusterAndDistrubtionMeasuresCDI, aes(maxClusterAWC, CDI))+
+  geom_point() +
+  geom_smooth(method = "lm") +
+   ggtitle("Vocabulary") +
+  xlab("Clusters/Hour ~ 16 Months") + ylab("CDI at 18 Months")
+
+
+clusterXACC <- ggplot(clusterAndDistrubtionMeasuresACC, aes(maxClusterAWC, ACC))+
+  geom_point() +
+   geom_smooth(method = "lm")+
+  ggtitle("Accuracy") +
+  xlab("Clusters/Hour ~ 16 Months") + ylab("Acurracy at 18 Months")
+
+clusterXRT <- ggplot(clusterAndDistrubtionMeasuresRT, aes(maxClusterAWC, RT))+
+  geom_point() +
+   geom_smooth(method = "lm")+
+  ggtitle("Reaction Time") +
+  xlab("Clusters/Hour ~ 16 Months") + ylab("Reaction Time at 18 Months")
+
+
+grid.arrange(clusterXCDI,clusterXACC, clusterXRT, ncol=3)
+```
+### Min Cluster AWC 
+
+```{r, echo = FALSE, message = FALSE}
+# ggplot(clusterAndDistrubtionMeasures, aes(clusterPerHr, clean_mean_awc))+
+#   geom_point() +
+#   geom_smooth(method = "lm")
+# 
+# ggplot(clusterAndDistrubtionMeasures, aes(clusterPerHr, clean_sd_awc))+
+#   geom_point() +
+#    geom_smooth(method = "lm")
+
+clusterXCDI <- ggplot(clusterAndDistrubtionMeasuresCDI, aes(minClusterAWC, CDI))+
+  geom_point() +
+  geom_smooth(method = "lm") +
+   ggtitle("Vocabulary") +
+  xlab("Clusters/Hour ~ 16 Months") + ylab("CDI at 18 Months")
+
+
+clusterXACC <- ggplot(clusterAndDistrubtionMeasuresACC, aes(minClusterAWC, ACC))+
+  geom_point() +
+   geom_smooth(method = "lm")+
+  ggtitle("Accuracy") +
+  xlab("Clusters/Hour ~ 16 Months") + ylab("Acurracy at 18 Months")
+
+clusterXRT <- ggplot(clusterAndDistrubtionMeasuresRT, aes(minClusterAWC, RT))+
+  geom_point() +
+   geom_smooth(method = "lm")+
+  ggtitle("Reaction Time") +
+  xlab("Clusters/Hour ~ 16 Months") + ylab("Reaction Time at 18 Months")
+
+
+grid.arrange(clusterXCDI,clusterXACC, clusterXRT, ncol=3)
+```
+
+
+
+### Cluster AWC size
+
+```{r, echo = FALSE, message = FALSE}
+# ggplot(clusterAndDistrubtionMeasures, aes(clusterPerHr, clean_mean_awc))+
+#   geom_point() +
+#   geom_smooth(method = "lm")
+# 
+# ggplot(clusterAndDistrubtionMeasures, aes(clusterPerHr, clean_sd_awc))+
+#   geom_point() +
+#    geom_smooth(method = "lm")
+
+clusterXCDI <- ggplot(clusterAndDistrubtionMeasuresCDI, aes(avgClusterDensity, CDI))+
+  geom_point() +
+  geom_smooth(method = "lm") +
+   ggtitle("Vocabulary") +
+  xlab("Clusters/Hour ~ 16 Months") + ylab("CDI at 18 Months")
+
+
+clusterXACC <- ggplot(clusterAndDistrubtionMeasuresACC, aes(avgClusterDensity, ACC))+
+  geom_point() +
+   geom_smooth(method = "lm")+
+  ggtitle("Accuracy") +
+  xlab("Clusters/Hour ~ 16 Months") + ylab("Acurracy at 18 Months")
+
+clusterXRT <- ggplot(clusterAndDistrubtionMeasuresRT, aes(avgClusterDensity, RT))+
+  geom_point() +
+   geom_smooth(method = "lm")+
+  ggtitle("Reaction Time") +
+  xlab("Clusters/Hour ~ 16 Months") + ylab("Reaction Time at 18 Months")
+
+
+grid.arrange(clusterXCDI,clusterXACC, clusterXRT, ncol=3)
+```
+
+### Number of Clusters
+
+```{r, echo = FALSE, message = FALSE}
+# ggplot(clusterAndDistrubtionMeasures, aes(clusterPerHr, clean_mean_awc))+
+#   geom_point() +
+#   geom_smooth(method = "lm")
+# 
+# ggplot(clusterAndDistrubtionMeasures, aes(clusterPerHr, clean_sd_awc))+
+#   geom_point() +
+#    geom_smooth(method = "lm")
+
+clusterXCDI <- ggplot(clusterAndDistrubtionMeasuresCDI, aes(nclusters, CDI))+
+  geom_point() +
+  geom_smooth(method = "lm") +
+   ggtitle("Vocabulary") +
+  xlab("Cnclusters ~ 16 Months") + ylab("CDI at 18 Months")
+
+
+clusterXACC <- ggplot(clusterAndDistrubtionMeasuresACC, aes(nclusters, ACC))+
+  geom_point() +
+   geom_smooth(method = "lm")+
+  ggtitle("Accuracy") +
+  xlab("nclusters ~ 16 Months") + ylab("Acurracy at 18 Months")
+
+clusterXRT <- ggplot(clusterAndDistrubtionMeasuresRT, aes(nclusters, RT))+
+  geom_point() +
+   geom_smooth(method = "lm")+
+  ggtitle("Reaction Time") +
+  xlab("nclusters ~ 16 Months") + ylab("Reaction Time at 18 Months")
+
+pcor(clusterAndDistrubtionMeasuresRT)
+
+grid.arrange(clusterXCDI,clusterXACC, clusterXRT, ncol=3)
+```
+
+
+
+### Clusters of Minimum size 2
+
+```{r echo=FALSE, message=FALSE}
+# ggplot(clusterAndDistrubtionMeasures, aes(clusterPerHr, clean_mean_awc))+
+#   geom_point() +
+#   geom_smooth(method = "lm")
+# 
+# ggplot(clusterAndDistrubtionMeasures, aes(clusterPerHr, clean_sd_awc))+
+#   geom_point() +
+#    geom_smooth(method = "lm")
+
+
+
+clusterXCDI <- ggplot(clusterAndDistrubtionMeasuresCDI, aes(nclusters, CDI))+
+  geom_point() +
+  geom_smooth(method = "lm") +
+   ggtitle("Predicting to Vocabulary") +
+  xlab("Clusters/Hour (min 2) ~ 16 Months") + ylab("CDI at 18 Months")
+
+
+clusterXACC <- ggplot(clusterAndDistrubtionMeasuresACC, aes(nclusters, ACC))+
+  geom_point() +
+   geom_smooth(method = "lm")+
+  ggtitle("Predicting to Acc") +
+  xlab("Clusters/Hour(min 2)  ~ 16 Months") + ylab("Acurracy at 18 Months")
+
+clusterXRT <- ggplot(clusterAndDistrubtionMeasuresRT, aes(nclusters, RT))+
+  geom_point() +
+   geom_smooth(method = "lm")+
+  ggtitle("Predicting to RT") +
+  xlab("Clusters/Hour (min 2)  ~ 16 Months") + ylab("Reaction Time at 18 Months")
+
+
+grid.arrange(clusterXCDI,clusterXACC, clusterXRT, ncol=3)
+```
+
+
+## Finally, we predict to all outcome measures from Average Word Count
+
+```{r, echo = FALSE, message = FALSE}
+# ggplot(clusterAndDistrubtionMeasures, aes(clusterPerHr, clean_mean_awc))+
+#   geom_point() +
+#   geom_smooth(method = "lm")
+# 
+# ggplot(clusterAndDistrubtionMeasures, aes(clusterPerHr, clean_sd_awc))+
+#   geom_point() +
+#    geom_smooth(method = "lm")
+
+clusterXCDI <- ggplot(clusterAndDistrubtionMeasuresCDI, aes(clean_mean_awc, CDI))+
+  geom_point() +
+  geom_smooth(method = "lm") +
+   ggtitle("Predicting to Vocabulary") +
+  xlab("Mean AWC/Hour ~ 16 Months") + ylab("CDI at 18 Months")
+
+
+clusterXACC <- ggplot(clusterAndDistrubtionMeasuresACC, aes(clean_mean_awc, ACC))+
+  geom_point() +
+   geom_smooth(method = "lm")+
+  ggtitle("Predicting to Acc") +
+  xlab("Mean AWC/Hour ~ 16 Months") + ylab("Acurracy at 18 Months")
+
+clusterXRT <- ggplot(clusterAndDistrubtionMeasuresRT, aes(clean_mean_awc, RT))+
+  geom_point() +
+   geom_smooth(method = "lm")+
+  ggtitle("Predicting to RT") +
+  xlab("Mean AWC/Hour ~ 16 Months") + ylab("Reaction Time at 18 Months")
+
+
+grid.arrange(clusterXCDI,clusterXACC, clusterXRT, ncol=3)
+```
+
+
+## Finally, we predict to all outcome measures from GINI
+
+```{r, echo = FALSE, message = FALSE}
+# ggplot(clusterAndDistrubtionMeasures, aes(clusterPerHr, clean_mean_awc))+
+#   geom_point() +
+#   geom_smooth(method = "lm")
+# 
+# ggplot(clusterAndDistrubtionMeasures, aes(clusterPerHr, clean_sd_awc))+
+#   geom_point() +
+#    geom_smooth(method = "lm")
+
+giniXCDI <- ggplot(clusterAndDistrubtionMeasuresCDI, aes(gini, CDI))+
+  geom_point() +
+  geom_smooth(method = "lm") +
+   ggtitle("Predicting to Vocabulary") +
+  xlab("GINI ~ 16 Months") + ylab("CDI at 18 Months")
+
+
+giniXACC <- ggplot(clusterAndDistrubtionMeasuresACC, aes(gini, ACC))+
+  geom_point() +
+   geom_smooth(method = "lm")+
+  ggtitle("Predicting to Acc") +
+  xlab("GINI ~ 16 Months") + ylab("Acurracy at 18 Months")
+
+giniXRT <- ggplot(clusterAndDistrubtionMeasuresRT, aes(gini, RT))+
+  geom_point() +
+   geom_smooth(method = "lm")+
+  ggtitle("Predicting to RT") +
+  xlab("GINI ~ 16 Months") + ylab("Reaction Time at 18 Months")
+
+
+grid.arrange(giniXCDI,giniXACC, giniXRT, ncol=3)
+```
+
+From these graphs we see that clusters/hour was significantly correlated with Accuracy and CDI score (p<.01). Critically, clusters/hour accounted for an additional 15% of the variance in CDI scores, after controlling for AWC (p = 0.012). It is important to note though that Mean AWC per Hour accounted for the majority of the variance for both Accuracy and Reaction Time. **Cluster Measures where clusters had to have a minimum size of 2 did not out preform the other cluster measures. In addition, GINI coefficient, although it correlated with other measures, it did not out preform Clusters nor did it out preform mean hourly AWC.**
+
+
+
+These results demonstrate that in addition to overall amount of talk, understanding dense periods of talk over the day provides a more nuanced view of the patterns of talk to young children. Importantly, the amount of dense talk provides additional predictive power when accounting for children's outcomes. Ongoing analyses of Spanish-speaking families will investigate if similar trends can be replicated in families from a different cultural and linguistic group. 
+
+
+
+
+
+
+
+
+
+
+```{r,  echo = FALSE, message = FALSE}
+# # #predicting to cdi
+
+
+
+model1 = lm(CDI ~ clean_mean_awc*nclusters , data = clusterAndDistrubtionMeasuresCDI)
+summary(model1)
+
+model1 = lm(CDI ~ clean_mean_awc*avgClustersize , data = clusterAndDistrubtionMeasuresCDI)
+summary(model1)
+
+model1 = lm(CDI ~ clean_mean_awc*minClusterAWC , data = clusterAndDistrubtionMeasuresCDI)
+summary(model1)
+
+model1 = lm(CDI ~ clean_mean_awc*maxClusterAWC , data = clusterAndDistrubtionMeasuresCDI)
+summary(model1)
+
+model1 = lm(CDI ~ clean_mean_awc*avgClusterDensity , data = clusterAndDistrubtionMeasuresCDI)
+summary(model1)
+
+model1 = lm(CDI ~ clean_mean_awc*unclean_total_hrs , data = clusterAndDistrubtionMeasuresCDI)
+summary(model1)
+
+model1 = lm(CDI ~ clean_mean_awc*clean_total_hrs , data = clusterAndDistrubtionMeasuresCDI)
+summary(model1)
+
+model1 = lm(CDI ~ clean_mean_awc*avgClusterDensityPerHr , data = clusterAndDistrubtionMeasuresCDI)
+summary(model1)
+
+model1 = lm(CDI ~ clean_mean_awc*gini , data = clusterAndDistrubtionMeasuresCDI)
+
+summary(model1)
+
+
+model1 = lm(RT ~ clean_mean_awc*nclusters , data = clusterAndDistrubtionMeasuresRT)
+summary(model1)
+
+model1 = lm(RT ~ clean_mean_awc*avgClustersize , data = clusterAndDistrubtionMeasuresRT)
+summary(model1)
+
+model1 = lm(RT ~ clean_mean_awc*minClusterAWC , data = clusterAndDistrubtionMeasuresRT)
+summary(model1)
+
+model1 = lm(RT ~ clean_mean_awc*maxClusterAWC , data = clusterAndDistrubtionMeasuresRT)
+summary(model1)
+
+model1 = lm(RT ~ clean_mean_awc*avgClusterDensity , data = clusterAndDistrubtionMeasuresRT)
+summary(model1)
+
+model1 = lm(RT ~ clean_mean_awc*unclean_total_hrs , data = clusterAndDistrubtionMeasuresRT)
+summary(model1)
+
+model1 = lm(RT ~ clean_mean_awc*clean_total_hrs , data = clusterAndDistrubtionMeasuresRT)
+summary(model1)
+
+model1 = lm(RT ~ clean_mean_awc*avgClusterDensityPerHr , data = clusterAndDistrubtionMeasuresRT)
+summary(model1)
+
+model1 = lm(RT ~ clean_mean_awc*gini , data = clusterAndDistrubtionMeasuresRT)
+
+summary(model1)
+
+model1 = lm(ACC ~ clean_mean_awc*nclusters , data = clusterAndDistrubtionMeasuresACC)
+summary(model1)
+
+model1 = lm(ACC ~ clean_mean_awc*avgClustersize , data = clusterAndDistrubtionMeasuresACC)
+summary(model1)
+
+model1 = lm(ACC ~ clean_mean_awc*minClusterAWC , data = clusterAndDistrubtionMeasuresACC)
+summary(model1)
+
+model1 = lm(ACC ~ clean_mean_awc*maxClusterAWC , data = clusterAndDistrubtionMeasuresACC)
+summary(model1)
+
+model1 = lm(ACC ~ clean_mean_awc*avgClusterDensity , data = clusterAndDistrubtionMeasuresACC)
+summary(model1)
+
+model1 = lm(ACC ~ clean_mean_awc*unclean_total_hrs , data = clusterAndDistrubtionMeasuresACC)
+summary(model1)
+
+model1 = lm(ACC ~ clean_mean_awc*clean_total_hrs , data = clusterAndDistrubtionMeasuresACC)
+summary(model1)
+
+model1 = lm(ACC ~ clean_mean_awc*avgClusterDensityPerHr , data = clusterAndDistrubtionMeasuresACC)
+summary(model1)
+
+model1 = lm(ACC ~ clean_mean_awc*gini , data = clusterAndDistrubtionMeasuresACC)
+
+summary(model1)
+
+
+
+model2 = lm(CDI ~ clusterPerHr , data = clusterAndDistrubtionMeasures)
+model1 = lm(CDI ~ clean_mean_awc , data = clusterAndDistrubtionMeasures)
+summary(model1)
+
+summary(model2)
+
+model3 = lm(CDI ~ clean_mean_awc + clusterPerHr, data = clusterAndDistrubtionMeasures)
+summary(model3)
+# 
+# #predicting to RT
+# model1 = lm(RT ~ avgclustersize2Min , data = clusterAndDistrubtionMeasures)
+# summary(model1)
+# 
+# model2 = lm(RT ~ clusterPerHr , data = clusterAndDistrubtionMeasures)
+# summary(model2)
+# 
+# model3 = lm(RT ~ gini , data = clusterAndDistrubtionMeasures)
+# summary(model3)
+
+model1 = lm(ACC ~ clean_mean_awc , data = clusterAndDistrubtionMeasures)
+summary(model1)
+
+model2 = lm(ACC ~ clusterPerHr , data = clusterAndDistrubtionMeasures)
+summary(model2)
+
+model3 = lm(ACC ~ clean_mean_awc + clusterPerHr, data = clusterAndDistrubtionMeasures)
+summary(model3)
+
+# 
+# 
+# #predicting to ACC
+# model1 = lm(ACC ~ avgclustersize2Min , data = clusterAndDistrubtionMeasures)
+# summary(model1)
+# 
+# 
+# model2 = lm(ACC ~ clusterPerHr , data = clusterAndDistrubtionMeasures)
+# summary(model2)
+# 
+# model3 = lm(ACC ~ gini , data = clusterAndDistrubtionMeasures)
+# summary(model3)
+# 
+# model4 = lm(ACC ~ clean_mean_awc , data = clusterAndDistrubtionMeasures)
+# summary(model4)
+# 
+# 
+# 
+# # 
+# # 
+
+cor.test(clusterAndDistrubtionMeasuresCDI$clean_mean_awc, clusterAndDistrubtionMeasuresCDI$CDI, method =c("pearson"))
+cor.test(clusterAndDistrubtionMeasuresRT$clean_mean_awc, clusterAndDistrubtionMeasuresRT$RT, method = c("pearson"))
+cor.test(clusterAndDistrubtionMeasuresACC$clean_mean_awc, clusterAndDistrubtionMeasuresACC$ACC, method = c("pearson"))
+
+cor.test(clusterAndDistrubtionMeasuresCDI$minClusterAWC, clusterAndDistrubtionMeasuresCDI$CDI, method =c("pearson"))#
+cor.test(clusterAndDistrubtionMeasuresRT$minClusterAWC, clusterAndDistrubtionMeasuresRT$RT, method = c("pearson"))
+cor.test(clusterAndDistrubtionMeasuresACC$minClusterAWC, clusterAndDistrubtionMeasuresACC$ACC, method = c("pearson"))
+
+cor.test(clusterAndDistrubtionMeasuresCDI$nclusters, clusterAndDistrubtionMeasuresCDI$CDI, method =c("pearson"))#
+cor.test(clusterAndDistrubtionMeasuresRT$nclusters, clusterAndDistrubtionMeasuresRT$RT, method = c("pearson"))
+cor.test(clusterAndDistrubtionMeasuresACC$nclusters, clusterAndDistrubtionMeasuresACC$ACC, method = c("pearson"))
+
+cor.test(clusterAndDistrubtionMeasuresCDI$avgClusterDensityPerHr, clusterAndDistrubtionMeasuresCDI$CDI, method =c("pearson"))#
+cor.test(clusterAndDistrubtionMeasuresACC$avgClusterDensityPerHr, clusterAndDistrubtionMeasuresACC$ACC, method = c("pearson"))
+cor.test(clusterAndDistrubtionMeasuresRT$avgClusterDensityPerHr, clusterAndDistrubtionMeasuresRT$RT, method = c("pearson"))
+
+cor.test(clusterAndDistrubtionMeasuresCDI$avgClustersize, clusterAndDistrubtionMeasuresCDI$CDI, method =c("pearson"))#
+cor.test(clusterAndDistrubtionMeasuresACC$avgClustersize, clusterAndDistrubtionMeasuresACC$ACC, method = c("pearson"))
+cor.test(clusterAndDistrubtionMeasuresRT$avgClustersize, clusterAndDistrubtionMeasuresRT$RT, method = c("pearson"))
+
+
+cor.test(clusterAndDistrubtionMeasuresCDI$clusterPerHr, clusterAndDistrubtionMeasuresCDI$CDI, method =c("pearson"))
+cor.test(clusterAndDistrubtionMeasuresACC$clusterPerHr, clusterAndDistrubtionMeasuresACC$ACC, method = c("pearson"))
+cor.test(clusterAndDistrubtionMeasuresRT$clusterPerHr, clusterAndDistrubtionMeasuresRT$RT, method = c("pearson"))
+
+cor.test(clusterAndDistrubtionMeasuresCDI$gini, clusterAndDistrubtionMeasuresCDI$CDI, method =c("pearson"))#
+cor.test(clusterAndDistrubtionMeasuresACC$gini, clusterAndDistrubtionMeasuresACC$ACC, method = c("pearson"))
+cor.test(clusterAndDistrubtionMeasuresRT$gini, clusterAndDistrubtionMeasuresRT$RT, method = c("pearson"))
+
+#
+
+
+
+#predicting to cdi
+# model1 = lm(CDI ~ clean_mean_awc , data = clusterAndDistrubtionMeasures)
+# summary(model1)
+# 
+# model2 = lm(CDI ~ clean_mean_awc*clusterPerHr  , data = clusterAndDistrubtionMeasures)
+# summary(model2)
+# # 
+# #predicting to ACC
+# model1 = lm( ACC~ clean_mean_awc , data = clusterAndDistrubtionMeasures)
+# summary(model1)
+# 
+# model2 = lm(ACC ~ clean_mean_awc*clusterPerHr, data = clusterAndDistrubtionMeasures)
+# summary(model2)
+# # 
+# # 
+# # #predicting to RT
+# model1 = lm( RT~ clean_mean_awc , data = clusterAndDistrubtionMeasures)
+# summary(model1)
+# 
+# model2 = lm(RT ~ clean_mean_awc + minClusterAWC, data = clusterAndDistrubtionMeasures)
+# summary(model2)
+
+
+
+
+```
+
+
+```{r, echo = FALSE, message = FALSE}
+
+# #Then, we will plot each, but first we will need to reshape the data frame into a long format
+# ggplot(clusterAndDistrubtionMeasures, aes(nclusters, clean_mean_awc))+
+#   geom_point() +
+#   geom_smooth(method = "lm")
+# 
+# cor.test(clusterAndDistrubtionMeasures$nclusters, clusterAndDistrubtionMeasures$clean_mean_awc, method = c("pearson"))
+# 
+# 
+
+# ggplot(clusterAndDistrubtionMeasures, aes(nclusters, clean_sd_awc))+
+#   geom_point() +
+#    geom_smooth(method = "lm")
+# 
+# ggplot(clusterAndDistrubtionMeasures, aes(nclusters, clean_total_hrs))+
+#   geom_point() +
+#    geom_smooth(method = "lm")
+# 
+# pcor.test(clusterAndDistrubtionMeasures$clean_mean_awc, clusterAndDistrubtionMeasures$avgclustersize, clusterAndDistrubtionMeasures$clean_total_hrs, method = c("pearson"))
+# 
+# ggplot(clusterAndDistrubtionMeasures, aes(avgclustersize, clean_mean_awc))+
+#   geom_point() +
+#   geom_smooth(method = "lm")
+# 
+# 
+# 
+# ggplot(clusterAndDistrubtionMeasures, aes(avgclustersize, clean_sd_awc))+
+#   geom_point() +
+#    geom_smooth(method = "lm")
+# 
+# 
+# ggplot(clusterAndDistrubtionMeasures, aes(avgclustersize, clean_total_hrs))+
+#   geom_point() +
+#   geom_smooth(method = "lm")
+# 
+# 
+# 
+
+# #Predicting to Mean AWC 
+# model1 = lm(clean_mean_awc ~ nclusters, data = clusterAndDistrubtionMeasures)
+# summary(model1)
+# 
+# model2 = lm(clean_mean_awc ~ nclusters + clean_total_hrs, data = clusterAndDistrubtionMeasures) 
+# summary(model2)
+# 
+# model3 = lm(clean_mean_awc ~ avgclustersize + clean_total_hrs, data = clusterAndDistrubtionMeasures) 
+# summary(model3)
+# 
+# 
+#
+# #predicting to cdi
+# model1 = lm(ACC ~ clean_mean_awc , data = clusterAndDistrubtionMeasures)
+# summary(model1)
+# 
+# model2 = lm(ACC ~ clusterPerHr, data = clusterAndDistrubtionMeasures)
+# summary(model2)
+# 
+# model3 = lm(ACC ~ clean_mean_awc + clusterPerHr, data = clusterAndDistrubtionMeasures)
+# summary(model3)
+# 
+# # 
+# 
+# ##Predicting to RT 
+# model4 = lm(RT ~ clean_mean_awc , data = clusterAndDistrubtionMeasures)
+# summary(model4)
+# 
+# model5 = lm(RT ~ clean_mean_awc + clusterPerHr, data = clusterAndDistrubtionMeasures)
+# summary(model5)
+# 
+# 
+# #Predictin to ACC
+# model6 = lm(ACC ~ clean_mean_awc , data = clusterAndDistrubtionMeasures)
+# summary(model6)
+# 
+# model7 = lm(ACC ~ clean_mean_awc + clusterPerHr, data = clusterAndDistrubtionMeasures)
+# summary(model7)
+# 
+# ## Predicting to CDI only Clean Mean AWC
+# 
+# model1 = lm(CDI ~ clean_mean_awc , data = clusterAndDistrubtionMeasures)
+# summary(model1)
+# 
+# model2 = lm(CDI ~ clean_mean_awc + clean_sd_awc, data = clusterAndDistrubtionMeasures)
+# summary(model2)
+# 
+# ## Predicting to RT only Clean Mean AWC
+# model4 = lm(RT ~ clean_mean_awc , data = clusterAndDistrubtionMeasures)
+# summary(model4)
+# 
+# model5 = lm(RT ~ clean_mean_awc + clean_sd_awc, data = clusterAndDistrubtionMeasures)
+# summary(model5)
+# 
+# 
+# ## Predicting to RT only Clean Mean AWC
+# model6 = lm(ACC ~ clean_mean_awc , data = clusterAndDistrubtionMeasures)
+# summary(model6)
+# 
+# model7 = lm(ACC ~ clean_mean_awc + clean_sd_awc, data = clusterAndDistrubtionMeasures)
+# summary(model7)
+# 
+# 
+# 
+# summary(model7)
+# #using anova
+# 
+# anova(model1, model2)
+# 
+# ```
+# ##the more times you pop up with 5 minute seg that are above the 70th percentile then ##srcd is a  big conf in child dev, virtual, next april. this project figure out 
+# ##predicting to outcomes, which of these factors if anything is a better predictor of CDI and RT 
+# ##linear model of child outcomes as a function of AWC clutser size and cluster number, controling for recording length
+# ##if any of those other three pop up controlling for the other things, then they must be adding to the piece of the pie indep.
+# ##TUESDAY 11 OCLOCK
+# ##I WILL HAVE THE DROP VARIABLE AND WE WILL FIGURE OUT A STORY
+# ##These variables are adding new stuff to the story?? 
+# ##what is more predictive? Clusters more predictive for CDI
+# ## further analysis
+# 
+# 
+# ```{r, echo = FALSE, message = FALSE}
+# ggplot(clusterAndDistrubtionMeasures, aes(avgHourlyPropDrop, clean_mean_awc))+
+#   geom_point() +
+#   geom_smooth(method = "lm")
+# 
+# ggplot(clusterAndDistrubtionMeasures, aes(avgHourlyPropDrop, clean_sd_awc))+
+#   geom_point() +
+#    geom_smooth(method = "lm")
+# 
+# ggplot(clusterAndDistrubtionMeasures, aes(avgHourlyPropDrop, CDI))+
+#   geom_point() +
+#   geom_smooth(method = "lm")
+# 
+# ggplot(clusterAndDistrubtionMeasures, aes(avgHourlyPropDrop, RT))+
+#   geom_point() +
+#    geom_smooth(method = "lm")
+# 
+# 
+# ggplot(clusterAndDistrubtionMeasures, aes(avgHourlyPropDrop, ACC))+
+#   geom_point() +
+#    geom_smooth(method = "lm")
+# 
+# 
+# cor.test(clusterAndDistrubtionMeasures$avgHourlyPropDrop, clusterAndDistrubtionMeasures$CDI, method = c("pearson"))
+# # 
+# cor.test(clusterAndDistrubtionMeasures$avgHourlyPropDrop, clusterAndDistrubtionMeasures$RT, method = c("pearson"))
+# # 
+# cor.test(clusterAndDistrubtionMeasures$avgHourlyPropDrop, clusterAndDistrubtionMeasures$ACC, method = c("pearson"))
+# # 
+# # 
+# # 
+# 
+# 
+# ```
+# 
+# 
+# 
+# 
+# ```{r, echo = FALSE, message = FALSE}
+# ggplot(clusterAndDistrubtionMeasures, aes(clusterPerHr, clean_mean_awc))+
+#   geom_point() +
+#   geom_smooth(method = "lm")
+# 
+# ggplot(clusterAndDistrubtionMeasures, aes(clusterPerHr, clean_sd_awc))+
+#   geom_point() +
+#    geom_smooth(method = "lm")
+# 
+# clusterXCDI <- ggplot(clusterAndDistrubtionMeasures, aes(clusterPerHr, CDI))+
+#   geom_point() +
+#   geom_smooth(method = "lm") +
+#    ggtitle("Predicting to Vocabulary at 18 Months") +
+#   xlab("Clusters per Hour at 16 Months") + ylab("CDI score at 18 Months")
+# 
+# ggsave("clusterXCDI.png",dpi=600)
+# 
+# 
+# 
+# clusterXACC <- ggplot(clusterAndDistrubtionMeasures, aes(clusterPerHr, ACC))+
+#   geom_point() +
+#    geom_smooth(method = "lm")+ 
+#   ggtitle("Predicting to Accuracy at 18 Months") +
+#   xlab("Clusters per Hour at 16 Months") + ylab("Acurracy at 18 Months")
+# 
+# grid.arrange(clusterXACC, clusterXCDI, ncol=2)
+# 
+# ggsave("awesomeGraphs.JPEG", dpi=600)
+# 
+# 
+# ggplot(clusterAndDistrubtionMeasures, aes(clusterPerHr, RT))+
+#   geom_point() +
+#    geom_smooth(method = "lm")
+# 
+# 
+# 
+# 
+# 
+# ##predicting to cdi
+# model1 = lm(CDI ~ clean_mean_awc , data = clusterAndDistrubtionMeasures)
+# summary(model1)
+# 
+# model2 = lm(CDI ~ clusterPerHr, data = clusterAndDistrubtionMeasures)
+# summary(model2)
+# 
+# model3 = lm(CDI ~ clean_mean_awc + clusterPerHr, data = clusterAndDistrubtionMeasures)
+# summary(model3)
+# 
+# 
+# ##Predicting to RT 
+# model4 = lm(RT ~ clean_mean_awc , data = clusterAndDistrubtionMeasures)
+# summary(model4)
+# 
+# model5 = lm(RT ~ clusterPerHr, data = clusterAndDistrubtionMeasures)
+# summary(model5)
+# 
+# model6 = lm(RT ~ clean_mean_awc + clusterPerHr, data = clusterAndDistrubtionMeasures)
+# summary(model6)
+# 
+# #Predicting to ACC
+# model4 = lm(ACC ~ clean_mean_awc , data = clusterAndDistrubtionMeasures)
+# summary(model4)
+# 
+# model5 = lm(ACC ~ clusterPerHr, data = clusterAndDistrubtionMeasures)
+# summary(model5)
+# 
+# model6 = lm(ACC ~ clean_mean_awc + clusterPerHr, data = clusterAndDistrubtionMeasures)
+# summary(model6)
+# 
+# 
+# 
+# ggplot(clusterAndDistrubtionMeasures, aes(clusterPerHr, avgHourlyPropDrop))+
+#   geom_point() +
+#    geom_smooth(method = "lm")
+# 
+# ```
+# 
+# ```{r, echo = FALSE, message = FALSE}
+# ggplot(clusterAndDistrubtionMeasures, aes(maxPropDrop, clean_mean_awc))+
+#   geom_point() +
+#   geom_smooth(method = "lm")
+# 
+# ggplot(clusterAndDistrubtionMeasures, aes(maxPropDrop, clean_sd_awc))+
+#   geom_point() +
+#    geom_smooth(method = "lm")
+# 
+# ggplot(clusterAndDistrubtionMeasures, aes(maxPropDrop, ACC))+
+#   geom_point() +
+#   geom_smooth(method = "lm")
+# 
+# ggplot(clusterAndDistrubtionMeasures, aes(maxPropDrop, RT))+
+#   geom_point() +
+#    geom_smooth(method = "lm")
+# ```
+# 
+# ```{r, echo = FALSE, message = FALSE}
+# 
+# 
+# ##predicting to cdi
+# model1 = lm(CDI ~ clean_mean_awc , data = clusterAndDistrubtionMeasures)
+# summary(model1)
+# 
+# model2 = lm(CDI ~ clean_mean_awc + avgHourlyPropDrop, data = clusterAndDistrubtionMeasures)
+# summary(model2)
+# 
+# 
+# model1 = lm(ACC ~ clean_mean_awc , data = clusterAndDistrubtionMeasures)
+# summary(model1)
+# 
+# model2 = lm(ACC ~ clusterPerHr, data = clusterAndDistrubtionMeasures)
+# summary(model2)
+# 
+# model1 = lm(RT ~ clean_mean_awc , data = clusterAndDistrubtionMeasures)
+# summary(model1)
+# 
+# model2 = lm(RT ~ clusterPerHr, data = clusterAndDistrubtionMeasures)
+# summary(model2)
+# 
+# mean(TL3Metadata$`MomEdu Mom yrs. Education`)
+# 
+# 
+# 
+# sd(clusterAndDistrubtionMeasures$nclusters)
+# sd(clusterAndDistrubtionMeasures$avgclustersize)
+# sd(clusterAndDistrubtionMeasures$clusterPerHr)
+# sd(clusterAndDistrubtionMeasures$clean_mean_awc)
+# mean(clusterAndDistrubtionMeasures$nclusters)
+# mean(clusterAndDistrubtionMeasures$avgclustersize)
+# mean(clusterAndDistrubtionMeasures$clusterPerHr)
+# mean(clusterAndDistrubtionMeasures$clean_mean_awc)
+# summary(clusterAndDistrubtionMeasures)
+# 
+```
+
